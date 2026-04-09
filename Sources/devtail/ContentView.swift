@@ -156,18 +156,37 @@ struct ContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            Spacer()
+
             Image(systemName: "terminal")
-                .font(.system(size: 40))
+                .font(.system(size: 36))
                 .foregroundStyle(.quaternary)
-            Text("No processes configured")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-            Text("Tap + to add your first process")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+
+            VStack(spacing: 4) {
+                Text("No processes yet")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text("Add a dev server, build command, or any\nlong-running process to manage from here.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+
+            Button {
+                withAnimation(.spring(duration: 0.25)) { viewState = .add }
+            } label: {
+                Label("Add Process", systemImage: "plus")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
     }
 
     // MARK: - Footer

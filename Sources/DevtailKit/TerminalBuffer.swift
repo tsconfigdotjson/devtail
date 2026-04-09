@@ -2,10 +2,12 @@ import SwiftUI
 
 // MARK: - Terminal Line
 
-public struct TerminalLine: Sendable {
+public struct TerminalLine: Sendable, Identifiable {
+    public let id: Int
     public var spans: [StyledSpan]
 
-    public init(spans: [StyledSpan] = []) {
+    public init(id: Int, spans: [StyledSpan] = []) {
+        self.id = id
         self.spans = spans
     }
 
@@ -23,15 +25,17 @@ public struct TerminalLine: Sendable {
 @MainActor
 @Observable
 public final class TerminalBuffer {
-    public private(set) var lines: [TerminalLine] = [TerminalLine()]
+    public private(set) var lines: [TerminalLine] = []
     public private(set) var version: Int = 0
 
     private var parser = ANSIParser()
     private var cursorRow: Int = 0
+    private var nextLineID: Int = 0
     private let maxLines: Int
 
-    public init(maxLines: Int = 10_000) {
+    public init(maxLines: Int = 500) {
         self.maxLines = maxLines
+        lines.append(makeLine())
     }
 
     public var hasContent: Bool {
@@ -50,7 +54,7 @@ public final class TerminalBuffer {
             case .newline:
                 cursorRow += 1
                 if cursorRow >= lines.count {
-                    lines.append(TerminalLine())
+                    lines.append(makeLine())
                 }
 
             case .carriageReturn:
@@ -77,15 +81,21 @@ public final class TerminalBuffer {
     }
 
     public func clear() {
-        lines = [TerminalLine()]
+        lines = [makeLine()]
         cursorRow = 0
         parser = ANSIParser()
         version += 1
     }
 
+    private func makeLine() -> TerminalLine {
+        let line = TerminalLine(id: nextLineID)
+        nextLineID += 1
+        return line
+    }
+
     private func ensureCursorValid() {
         while cursorRow >= lines.count {
-            lines.append(TerminalLine())
+            lines.append(makeLine())
         }
     }
 
