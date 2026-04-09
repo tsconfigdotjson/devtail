@@ -14,7 +14,7 @@ public struct TerminalOutputView: View {
 
   public var body: some View {
     // Reading version registers @Observable tracking
-    let _ = buffer.version
+    _ = buffer.version
     TerminalNSView(buffer: buffer, version: buffer.version, fontSize: fontSize)
   }
 }
