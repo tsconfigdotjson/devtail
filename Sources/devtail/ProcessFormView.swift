@@ -1,22 +1,37 @@
 import SwiftUI
 
-struct AddProcessView: View {
+struct ProcessFormView: View {
     var store: ProcessStore
+    var editing: DevProcess?
     var onDismiss: () -> Void
 
-    @State private var name = ""
-    @State private var command = ""
-    @State private var workingDirectory = ""
-    @State private var auxEntries: [AuxEntry] = []
+    @State private var name: String
+    @State private var command: String
+    @State private var workingDirectory: String
+    @State private var auxEntries: [AuxEntry]
     @State private var isAddingAux = false
     @State private var newAuxName = ""
     @State private var newAuxCommand = ""
+
+    private var isEditing: Bool { editing != nil }
+
+    init(store: ProcessStore, editing: DevProcess? = nil, onDismiss: @escaping () -> Void) {
+        self.store = store
+        self.editing = editing
+        self.onDismiss = onDismiss
+        _name = State(initialValue: editing?.name ?? "")
+        _command = State(initialValue: editing?.command ?? "")
+        _workingDirectory = State(initialValue: editing?.workingDirectory ?? "")
+        _auxEntries = State(initialValue: editing?.auxiliaryCommands.map {
+            AuxEntry(id: $0.id, name: $0.name, command: $0.command)
+        } ?? [])
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("New Process")
+                    Text(isEditing ? "Edit Process" : "New Process")
                         .font(.system(size: 15, weight: .semibold))
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -122,7 +137,7 @@ struct AddProcessView: View {
             Divider()
 
             Button(action: save) {
-                Text("Create Process")
+                Text(isEditing ? "Save Changes" : "Create Process")
                     .font(.system(size: 13, weight: .medium))
                     .frame(maxWidth: .infinity)
             }
@@ -148,21 +163,36 @@ struct AddProcessView: View {
 
     private func save() {
         let auxCommands = auxEntries.map {
-            AuxiliaryCommand(name: $0.name, command: $0.command)
+            AuxiliaryCommand(id: $0.id, name: $0.name, command: $0.command)
         }
-        store.addProcess(
-            name: name,
-            command: command,
-            workingDirectory: workingDirectory,
-            auxiliaryCommands: auxCommands
-        )
+        if let process = editing {
+            store.updateProcess(
+                id: process.id,
+                name: name,
+                command: command,
+                workingDirectory: workingDirectory,
+                auxiliaryCommands: auxCommands
+            )
+        } else {
+            store.addProcess(
+                name: name,
+                command: command,
+                workingDirectory: workingDirectory,
+                auxiliaryCommands: auxCommands
+            )
+        }
         onDismiss()
     }
 }
 
 private struct AuxEntry: Identifiable {
-    let id = UUID()
+    let id: UUID
     var name: String
     var command: String
-}
 
+    init(id: UUID = UUID(), name: String, command: String) {
+        self.id = id
+        self.name = name
+        self.command = command
+    }
+}

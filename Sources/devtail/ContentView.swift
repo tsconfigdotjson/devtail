@@ -1,14 +1,17 @@
 import SwiftUI
+import ServiceManagement
 
 enum ViewState: Equatable {
     case list
     case detail(UUID)
     case add
+    case edit(UUID)
 }
 
 struct ContentView: View {
     var store: ProcessStore
     @State private var viewState: ViewState = .list
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,7 +34,14 @@ struct ContentView: View {
         HStack(spacing: 10) {
             if viewState != .list {
                 Button {
-                    withAnimation(.spring(duration: 0.25)) { viewState = .list }
+                    withAnimation(.spring(duration: 0.25)) {
+                        switch viewState {
+                        case .edit(let id):
+                            viewState = .detail(id)
+                        default:
+                            viewState = .list
+                        }
+                    }
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .semibold))
@@ -85,6 +95,11 @@ struct ContentView: View {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             process.toggle()
                         }
+                    },
+                    onEdit: {
+                        withAnimation(.spring(duration: 0.25)) {
+                            viewState = .edit(id)
+                        }
                     }
                 )
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -93,10 +108,20 @@ struct ContentView: View {
             }
 
         case .add:
-            AddProcessView(store: store) {
+            ProcessFormView(store: store) {
                 withAnimation(.spring(duration: 0.25)) { viewState = .list }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+
+        case .edit(let id):
+            if let process = store.processes.first(where: { $0.id == id }) {
+                ProcessFormView(store: store, editing: process) {
+                    withAnimation(.spring(duration: 0.25)) { viewState = .detail(id) }
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                listContent
+            }
         }
     }
 
@@ -155,7 +180,27 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
+
             Spacer()
+
+            Toggle(isOn: $launchAtLogin) {
+                Text("Launch at Login")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .onChange(of: launchAtLogin) { _, newValue in
+                do {
+                    if newValue {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                } catch {
+                    launchAtLogin = SMAppService.mainApp.status == .enabled
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

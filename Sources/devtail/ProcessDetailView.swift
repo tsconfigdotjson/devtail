@@ -4,6 +4,7 @@ import DevtailKit
 struct ProcessDetailView: View {
     let process: DevProcess
     var onToggle: () -> Void
+    var onEdit: () -> Void
 
     @State private var selectedTab = 0
 
@@ -11,11 +12,18 @@ struct ProcessDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Process info header
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
+                HStack(spacing: 8) {
                     Text(process.name)
                         .font(.system(size: 15, weight: .semibold))
 
                     Spacer()
+
+                    Button(action: onEdit) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
 
                     Button(action: onToggle) {
                         HStack(spacing: 6) {

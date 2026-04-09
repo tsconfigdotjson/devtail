@@ -15,6 +15,11 @@ final class DevProcess: Identifiable {
     var isRunning = false
 
     private var runner: ProcessRunner?
+    private var auxiliaryRunners: [UUID: ProcessRunner] = [:]
+    private var userStopped = false
+
+    /// Called when running state changes so the store can persist.
+    var onStateChange: (() -> Void)?
 
     init(
         id: UUID = UUID(),
@@ -39,8 +44,11 @@ final class DevProcess: Identifiable {
         return buf
     }
 
+    // MARK: - Lifecycle
+
     func start() {
         guard !isRunning else { return }
+        userStopped = false
         isRunning = true
         buffer.clear()
 
@@ -50,20 +58,67 @@ final class DevProcess: Identifiable {
             command: command,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             buffer: buffer
-        ) { [weak self] _ in
-            self?.isRunning = false
-            self?.runner = nil
+        ) { [weak self] status in
+            guard let self, self.runner === r else { return }
+            self.runner = nil
+            self.isRunning = false
+            self.stopAuxiliaryCommands()
+
+            if status == 0 {
+                self.buffer.append("\n\u{1B}[2mProcess exited\u{1B}[0m\n")
+            } else {
+                self.buffer.append("\n\u{1B}[31mProcess exited with code \(status)\u{1B}[0m\n")
+            }
+
+            if !self.userStopped {
+                AppNotifications.processExited(name: self.name, exitCode: status)
+            }
+
+            self.onStateChange?()
         }
+
+        startAuxiliaryCommands()
+        onStateChange?()
     }
 
     func stop() {
+        guard isRunning else { return }
+        userStopped = true
         runner?.stop()
         runner = nil
+        stopAuxiliaryCommands()
         isRunning = false
+        buffer.append("\n\u{1B}[2mProcess stopped\u{1B}[0m\n")
+        onStateChange?()
     }
 
     func toggle() {
         if isRunning { stop() } else { start() }
+    }
+
+    // MARK: - Auxiliary Commands
+
+    private func startAuxiliaryCommands() {
+        for aux in auxiliaryCommands {
+            let auxRunner = ProcessRunner()
+            let auxBuffer = bufferFor(auxiliary: aux.id)
+            auxBuffer.clear()
+            auxiliaryRunners[aux.id] = auxRunner
+            auxRunner.start(
+                command: aux.command,
+                workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
+                buffer: auxBuffer
+            ) { [weak self] _ in
+                self?.auxiliaryRunners[aux.id] = nil
+            }
+        }
+    }
+
+    private func stopAuxiliaryCommands() {
+        for (_, r) in auxiliaryRunners {
+            r.stop()
+        }
+        auxiliaryRunners.removeAll()
     }
 }
 
