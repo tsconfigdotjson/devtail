@@ -191,6 +191,11 @@ struct ContentView: View {
 
     // MARK: - Footer
 
+    /// SMAppService requires a proper .app bundle to work.
+    private var canManageLaunchAtLogin: Bool {
+        Bundle.main.bundlePath.hasSuffix(".app")
+    }
+
     private var footerBar: some View {
         HStack {
             Button("Quit Devtail") {
@@ -202,22 +207,24 @@ struct ContentView: View {
 
             Spacer()
 
-            Toggle(isOn: $launchAtLogin) {
-                Text("Launch at Login")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .onChange(of: launchAtLogin) { _, newValue in
-                do {
-                    if newValue {
-                        try SMAppService.mainApp.register()
-                    } else {
-                        try SMAppService.mainApp.unregister()
+            if canManageLaunchAtLogin {
+                Toggle(isOn: $launchAtLogin) {
+                    Text("Launch at Login")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .onChange(of: launchAtLogin) { _, newValue in
+                    do {
+                        if newValue {
+                            try SMAppService.mainApp.register()
+                        } else {
+                            try SMAppService.mainApp.unregister()
+                        }
+                    } catch {
+                        launchAtLogin = SMAppService.mainApp.status == .enabled
                     }
-                } catch {
-                    launchAtLogin = SMAppService.mainApp.status == .enabled
                 }
             }
         }

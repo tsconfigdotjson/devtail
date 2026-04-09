@@ -101,6 +101,12 @@ struct ProcessDetailView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }
+        // Reset tab if aux commands were removed during edit
+        .onChange(of: process.auxiliaryCommands.count) {
+            if selectedTab > process.auxiliaryCommands.count {
+                selectedTab = 0
+            }
+        }
     }
 
     private var currentBuffer: TerminalBuffer {

@@ -22,14 +22,20 @@ final class ProcessStore {
         }
 
         // Wire up persistence callbacks
-        let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
         for process in processes {
             process.onStateChange = { [weak self] in self?.save() }
         }
 
-        // Auto-start previously running processes
-        for process in processes where autoStartIDs.contains(process.id) {
-            process.start()
+        // Defer auto-start so views have time to initialize
+        let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
+        if !autoStartIDs.isEmpty {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(100))
+                guard let self else { return }
+                for process in self.processes where autoStartIDs.contains(process.id) {
+                    process.start()
+                }
+            }
         }
     }
 
@@ -67,6 +73,7 @@ final class ProcessStore {
         process.command = command
         process.workingDirectory = workingDirectory
         process.auxiliaryCommands = auxiliaryCommands
+        process.cleanupAuxiliaryBuffers()
         save()
     }
 
@@ -77,12 +84,13 @@ final class ProcessStore {
         Persistence.save(processes)
     }
 
+    /// Save state then synchronously kill all processes.
+    /// Blocks until every child process is dead — only call during app quit.
     func stopAllForQuit() {
-        Persistence.save(processes) // Capture wasRunning before we stop everything
         isQuitting = true
+        Persistence.save(processes) // Captures wasRunning before we stop
         for process in processes where process.isRunning {
-            process.stop()
+            process.forceStop()
         }
     }
-
 }

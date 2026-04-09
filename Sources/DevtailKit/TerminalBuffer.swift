@@ -33,7 +33,7 @@ public final class TerminalBuffer {
     private var nextLineID: Int = 0
     private let maxLines: Int
 
-    public init(maxLines: Int = 500) {
+    public init(maxLines: Int = 2000) {
         self.maxLines = maxLines
         lines.append(makeLine())
     }

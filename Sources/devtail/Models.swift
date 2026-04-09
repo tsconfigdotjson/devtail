@@ -44,6 +44,14 @@ final class DevProcess: Identifiable {
         return buf
     }
 
+    /// Remove buffers for auxiliary commands that no longer exist.
+    func cleanupAuxiliaryBuffers() {
+        let validIDs = Set(auxiliaryCommands.map(\.id))
+        for key in auxiliaryBuffers.keys where !validIDs.contains(key) {
+            auxiliaryBuffers.removeValue(forKey: key)
+        }
+    }
+
     // MARK: - Lifecycle
 
     func start() {
@@ -90,6 +98,19 @@ final class DevProcess: Identifiable {
         isRunning = false
         buffer.append("\n\u{1B}[2mProcess stopped\u{1B}[0m\n")
         onStateChange?()
+    }
+
+    /// Synchronous stop that blocks until all processes are dead.
+    /// Only use during app quit.
+    func forceStop() {
+        userStopped = true
+        runner?.stopSync()
+        runner = nil
+        for (_, r) in auxiliaryRunners {
+            r.stopSync()
+        }
+        auxiliaryRunners.removeAll()
+        isRunning = false
     }
 
     func toggle() {

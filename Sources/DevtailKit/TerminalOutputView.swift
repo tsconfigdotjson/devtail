@@ -65,26 +65,47 @@ private struct TerminalNSView: NSViewRepresentable {
     class Coordinator {
         weak var textView: NSTextView?
 
+        // Cached objects — avoid recreating on every 50ms update
+        private var cachedFontSize: CGFloat = 0
+        private var regularFont: NSFont?
+        private var boldFont: NSFont?
+        private var colorCache: [ANSIColor: NSColor] = [:]
+
         func update(buffer: TerminalBuffer, fontSize: CGFloat) {
             guard let textView else { return }
             guard let storage = textView.textStorage else { return }
 
+            ensureFontCache(fontSize: fontSize)
             let attrStr = buildAttributedString(buffer: buffer, fontSize: fontSize)
 
             storage.beginEditing()
             storage.setAttributedString(attrStr)
             storage.endEditing()
 
-            // Auto-scroll to bottom
             textView.scrollToEndOfDocument(nil)
+        }
+
+        private func ensureFontCache(fontSize: CGFloat) {
+            guard fontSize != cachedFontSize else { return }
+            cachedFontSize = fontSize
+            regularFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+            boldFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+            colorCache.removeAll()
+        }
+
+        private func resolveColor(_ color: ANSIColor) -> NSColor {
+            if let cached = colorCache[color] { return cached }
+            let resolved = color.nsColor
+            colorCache[color] = resolved
+            return resolved
         }
 
         private func buildAttributedString(buffer: TerminalBuffer, fontSize: CGFloat) -> NSAttributedString {
             let result = NSMutableAttributedString()
-            let defaultFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
-            let boldFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+            let regFont = regularFont!
+            let bldFont = boldFont!
             let defaultAttrs: [NSAttributedString.Key: Any] = [
-                .font: defaultFont,
+                .font: regFont,
                 .foregroundColor: NSColor.labelColor
             ]
 
@@ -97,10 +118,10 @@ private struct TerminalNSView: NSViewRepresentable {
                         let style = span.style
 
                         if style.foreground != .default {
-                            attrs[.foregroundColor] = style.foreground.nsColor
+                            attrs[.foregroundColor] = resolveColor(style.foreground)
                         }
                         if style.bold {
-                            attrs[.font] = boldFont
+                            attrs[.font] = bldFont
                         }
                         if style.dim, style.foreground == .default {
                             attrs[.foregroundColor] = NSColor.secondaryLabelColor
