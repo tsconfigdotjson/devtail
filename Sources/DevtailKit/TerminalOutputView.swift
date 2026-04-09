@@ -14,7 +14,7 @@ public struct TerminalOutputView: View {
 
   public var body: some View {
     // Reading version registers @Observable tracking
-    _ = buffer.version
+    let _ = buffer.version  // swiftlint:disable:this redundant_discardable_let
     TerminalNSView(buffer: buffer, version: buffer.version, fontSize: fontSize)
   }
 }
