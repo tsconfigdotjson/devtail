@@ -18,7 +18,7 @@ jobs:
         run: swift format lint --strict --recursive Sources/
 
       - name: SwiftLint
-        uses: realm/SwiftLint@v0.63.2
+        run: swiftlint lint --strict
 
       - name: Build
         run: swift build
