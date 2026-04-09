@@ -1,7 +1,8 @@
 import SwiftUI
+import DevtailKit
 
 struct ProcessCardView: View {
-    let process: ProcessConfig
+    let process: DevProcess
     var onSelect: () -> Void
     var onToggle: () -> Void
     var onDelete: () -> Void
@@ -23,28 +24,39 @@ struct ProcessCardView: View {
                 }
 
                 // Command output preview
-                if !process.commandOutput.isEmpty {
-                    TerminalBlock(
-                        text: process.commandOutput,
-                        lineLimit: 3,
-                        compact: true
-                    )
+                if process.buffer.hasContent {
+                    TerminalBlock {
+                        TerminalPreviewText(
+                            buffer: process.buffer,
+                            lineLimit: 3,
+                            fontSize: 10
+                        )
+                    }
                 }
 
                 // Auxiliary command previews
                 ForEach(process.auxiliaryCommands) { aux in
+                    let auxBuf = process.bufferFor(auxiliary: aux.id)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(aux.name.uppercased())
                             .font(.system(size: 9, weight: .semibold, design: .rounded))
                             .foregroundStyle(.tertiary)
                             .tracking(0.5)
 
-                        TerminalBlock(
-                            text: aux.output.isEmpty ? aux.command : aux.output,
-                            lineLimit: 2,
-                            compact: true,
-                            dimmed: aux.output.isEmpty
-                        )
+                        TerminalBlock {
+                            if auxBuf.hasContent {
+                                TerminalPreviewText(
+                                    buffer: auxBuf,
+                                    lineLimit: 2,
+                                    fontSize: 10
+                                )
+                            } else {
+                                Text(aux.command)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(.tertiary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
                     }
                 }
             }
@@ -95,20 +107,13 @@ struct StatusDot: View {
     }
 }
 
-struct TerminalBlock: View {
-    let text: String
-    var lineLimit: Int? = nil
-    var compact: Bool = false
-    var dimmed: Bool = false
+struct TerminalBlock<Content: View>: View {
+    @ViewBuilder let content: () -> Content
 
     var body: some View {
-        Text(text)
-            .font(.system(size: compact ? 10 : 11, design: .monospaced))
-            .foregroundStyle(dimmed ? .tertiary : .secondary)
-            .lineLimit(lineLimit)
-            .truncationMode(.tail)
+        content()
+            .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(compact ? 8 : 10)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color(nsColor: .textBackgroundColor))

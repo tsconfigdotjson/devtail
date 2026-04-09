@@ -8,8 +8,12 @@ let package = Package(
         .macOS(.v14)
     ],
     targets: [
+        .target(
+            name: "DevtailKit"
+        ),
         .executableTarget(
-            name: "devtail"
+            name: "devtail",
+            dependencies: ["DevtailKit"]
         ),
     ]
 )

@@ -1,7 +1,8 @@
 import SwiftUI
+import DevtailKit
 
 struct ProcessDetailView: View {
-    let process: ProcessConfig
+    let process: DevProcess
     var onToggle: () -> Void
 
     @State private var selectedTab = 0
@@ -73,13 +74,15 @@ struct ProcessDetailView: View {
             }
 
             // Terminal output
-            ScrollView {
-                Text(currentOutput)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(isPlaceholder ? .tertiary : .secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .textSelection(.enabled)
+            Group {
+                if currentBuffer.hasContent {
+                    TerminalOutputView(buffer: currentBuffer)
+                } else {
+                    Text("Waiting for output...")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .background(Color(nsColor: .textBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -92,19 +95,14 @@ struct ProcessDetailView: View {
         }
     }
 
-    private var currentOutput: String {
+    private var currentBuffer: TerminalBuffer {
         if selectedTab == 0 {
-            return process.commandOutput.isEmpty ? "Waiting for output..." : process.commandOutput
+            return process.buffer
         }
         let auxIndex = selectedTab - 1
         guard auxIndex >= 0, auxIndex < process.auxiliaryCommands.count else {
-            return ""
+            return process.buffer
         }
-        let aux = process.auxiliaryCommands[auxIndex]
-        return aux.output.isEmpty ? "Waiting for output..." : aux.output
-    }
-
-    private var isPlaceholder: Bool {
-        currentOutput == "Waiting for output..."
+        return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
     }
 }

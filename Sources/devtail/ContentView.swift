@@ -81,7 +81,11 @@ struct ContentView: View {
             if let process = store.processes.first(where: { $0.id == id }) {
                 ProcessDetailView(
                     process: process,
-                    onToggle: { store.toggleProcess(id: id) }
+                    onToggle: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            process.toggle()
+                        }
+                    }
                 )
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             } else {
@@ -111,7 +115,11 @@ struct ContentView: View {
                                         viewState = .detail(process.id)
                                     }
                                 },
-                                onToggle: { store.toggleProcess(id: process.id) },
+                                onToggle: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        process.toggle()
+                                    }
+                                },
                                 onDelete: { store.removeProcess(id: process.id) }
                             )
                         }
