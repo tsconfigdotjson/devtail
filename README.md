@@ -9,6 +9,7 @@ A macOS menu bar app for launching and monitoring local development processes.
 - **Live output** — View command output in a terminal-style display
 - **Log watchers** — Attach auxiliary tail commands to monitor log files alongside your process
 - **Detail view** — Click into a process for full scrollable output with tabbed log switching
+- **Pop-out windows** — Open any terminal output in a standalone window to keep it visible while you work
 
 ## Requirements
 
