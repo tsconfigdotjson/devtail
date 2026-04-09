@@ -1,4 +1,4 @@
-# Devtail
+# devtail
 
 A macOS menu bar app for launching and monitoring local development processes.
 

@@ -56,7 +56,7 @@ struct ContentView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(.tint)
 
-            Text("Devtail")
+            Text("devtail")
                 .font(.system(size: 15, weight: .semibold))
 
             Spacer()
@@ -198,7 +198,7 @@ struct ContentView: View {
 
     private var footerBar: some View {
         HStack {
-            Button("Quit Devtail") {
+            Button("Quit devtail") {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)

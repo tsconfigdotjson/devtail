@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "indentation": {
+    "spaces": 2
+  },
+  "lineLength": 120,
+  "indentConditionalCompilationBlocks": true,
+  "lineBreakBeforeControlFlowKeywords": false,
+  "lineBreakBeforeEachArgument": false,
+  "respectsExistingLineBreaks": true
+}

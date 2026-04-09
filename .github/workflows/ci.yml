@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift Format
+        run: |
+          brew install swift-format
+          swift-format lint --strict --recursive Sources/
+
+      - name: SwiftLint
+        run: |
+          brew install swiftlint
+          swiftlint lint --strict
+
+      - name: Build
+        run: swift build
