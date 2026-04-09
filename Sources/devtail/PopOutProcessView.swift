@@ -3,7 +3,6 @@ import DevtailKit
 
 struct PopOutProcessView: View {
     let buffer: TerminalBuffer
-    let title: String
 
     var body: some View {
         Group {

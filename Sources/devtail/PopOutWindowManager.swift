@@ -16,7 +16,7 @@ final class PopOutWindowManager {
         // If window already exists, bring it to front
         if let existing = windows[key], existing.isVisible {
             existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
             return
         }
 
@@ -27,7 +27,7 @@ final class PopOutWindowManager {
             defer: false
         )
 
-        let hostingView = NSHostingView(rootView: PopOutProcessView(buffer: buffer, title: title))
+        let hostingView = NSHostingView(rootView: PopOutProcessView(buffer: buffer))
         window.contentView = hostingView
         window.title = title
         window.minSize = NSSize(width: 300, height: 200)
@@ -45,7 +45,7 @@ final class PopOutWindowManager {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     func closeWindow(for buffer: TerminalBuffer) {

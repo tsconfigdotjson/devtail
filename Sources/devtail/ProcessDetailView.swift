@@ -94,38 +94,39 @@ struct ProcessDetailView: View {
                 }
             }
             .background(Color(nsColor: .textBackgroundColor))
+            .overlay(alignment: .bottom) {
+                if isTerminalHovered {
+                    Button {
+                        let title: String
+                        let auxIndex = selectedTab - 1
+                        if selectedTab == 0 || auxIndex >= process.auxiliaryCommands.count {
+                            title = process.name
+                        } else {
+                            let aux = process.auxiliaryCommands[auxIndex]
+                            title = "\(process.name) — \(aux.name)"
+                        }
+                        PopOutWindowManager.shared.openWindow(buffer: currentBuffer, title: title)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Pop Out")
+                                .font(.system(size: 11, weight: .medium))
+                            Image(systemName: "arrow.up.forward.app")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
             )
-            .overlay(alignment: .topTrailing) {
-                if isTerminalHovered {
-                    Button {
-                        let title: String
-                        if selectedTab == 0 {
-                            title = process.name
-                        } else {
-                            let aux = process.auxiliaryCommands[selectedTab - 1]
-                            title = "\(process.name) — \(aux.name)"
-                        }
-                        PopOutWindowManager.shared.openWindow(buffer: currentBuffer, title: title)
-                    } label: {
-                        Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 6)
-                    .padding(.trailing, 20)
-                    .transition(.opacity)
-                }
-            }
             .onHover { hovering in
                 withAnimation(.easeInOut(duration: 0.15)) {
                     isTerminalHovered = hovering
@@ -153,3 +154,4 @@ struct ProcessDetailView: View {
         return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
     }
 }
+
