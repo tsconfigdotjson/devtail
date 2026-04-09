@@ -1,157 +1,156 @@
-import SwiftUI
 import DevtailKit
+import SwiftUI
 
 struct ProcessDetailView: View {
-    let process: DevProcess
-    var onToggle: () -> Void
-    var onEdit: () -> Void
+  let process: DevProcess
+  var onToggle: () -> Void
+  var onEdit: () -> Void
 
-    @State private var selectedTab = 0
-    @State private var isTerminalHovered = false
+  @State private var selectedTab = 0
+  @State private var isTerminalHovered = false
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Process info header
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(process.name)
-                        .font(.system(size: 15, weight: .semibold))
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      // Process info header
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 8) {
+          Text(process.name)
+            .font(.system(size: 15, weight: .semibold))
 
-                    Spacer()
+          Spacer()
 
-                    Button(action: onEdit) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+          Button(action: onEdit) {
+            Image(systemName: "gearshape")
+              .font(.system(size: 12))
+              .foregroundStyle(.secondary)
+          }
+          .buttonStyle(.plain)
 
-                    Button(action: onToggle) {
-                        HStack(spacing: 6) {
-                            StatusDot(isRunning: process.isRunning)
-                            Text(process.isRunning ? "Running" : "Stopped")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color(nsColor: .controlBackgroundColor))
-                        )
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 8))
-                    Text(process.command)
-                        .font(.system(size: 11, design: .monospaced))
-                }
-                .foregroundStyle(.tertiary)
-
-                if !process.workingDirectory.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder")
-                            .font(.system(size: 8))
-                        Text(process.workingDirectory)
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(.quaternary)
-                }
+          Button(action: onToggle) {
+            HStack(spacing: 6) {
+              StatusDot(isRunning: process.isRunning)
+              Text(process.isRunning ? "Running" : "Stopped")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            // Tab picker for output sources
-            if !process.auxiliaryCommands.isEmpty {
-                Picker("", selection: $selectedTab) {
-                    Text("Output").tag(0)
-                    ForEach(Array(process.auxiliaryCommands.enumerated()), id: \.element.id) { pair in
-                        Text(pair.element.name).tag(pair.offset + 1)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
-
-            // Terminal output
-            Group {
-                if currentBuffer.hasContent {
-                    TerminalOutputView(buffer: currentBuffer)
-                } else {
-                    Text("Waiting for output...")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .background(Color(nsColor: .textBackgroundColor))
-            .overlay(alignment: .bottom) {
-                if isTerminalHovered {
-                    Button {
-                        let title: String
-                        let auxIndex = selectedTab - 1
-                        if selectedTab == 0 || auxIndex >= process.auxiliaryCommands.count {
-                            title = process.name
-                        } else {
-                            let aux = process.auxiliaryCommands[auxIndex]
-                            title = "\(process.name) — \(aux.name)"
-                        }
-                        PopOutWindowManager.shared.openWindow(buffer: currentBuffer, title: title)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Pop Out")
-                                .font(.system(size: 11, weight: .medium))
-                            Image(systemName: "arrow.up.forward.app")
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial)
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.opacity)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+              Capsule()
+                .fill(Color(nsColor: .controlBackgroundColor))
             )
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isTerminalHovered = hovering
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
+            .overlay(
+              Capsule()
+                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            )
+          }
+          .buttonStyle(.plain)
         }
-        // Reset tab if aux commands were removed during edit
-        .onChange(of: process.auxiliaryCommands.count) {
-            if selectedTab > process.auxiliaryCommands.count {
-                selectedTab = 0
-            }
-        }
-    }
 
-    private var currentBuffer: TerminalBuffer {
-        if selectedTab == 0 {
-            return process.buffer
+        HStack(spacing: 4) {
+          Image(systemName: "chevron.right")
+            .font(.system(size: 8))
+          Text(process.command)
+            .font(.system(size: 11, design: .monospaced))
         }
-        let auxIndex = selectedTab - 1
-        guard auxIndex >= 0, auxIndex < process.auxiliaryCommands.count else {
-            return process.buffer
+        .foregroundStyle(.tertiary)
+
+        if !process.workingDirectory.isEmpty {
+          HStack(spacing: 4) {
+            Image(systemName: "folder")
+              .font(.system(size: 8))
+            Text(process.workingDirectory)
+              .font(.system(size: 10))
+          }
+          .foregroundStyle(.quaternary)
         }
-        return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+
+      // Tab picker for output sources
+      if !process.auxiliaryCommands.isEmpty {
+        Picker("", selection: $selectedTab) {
+          Text("Output").tag(0)
+          ForEach(Array(process.auxiliaryCommands.enumerated()), id: \.element.id) { pair in
+            Text(pair.element.name).tag(pair.offset + 1)
+          }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+      }
+
+      // Terminal output
+      Group {
+        if currentBuffer.hasContent {
+          TerminalOutputView(buffer: currentBuffer)
+        } else {
+          Text("Waiting for output...")
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+      }
+      .background(Color(nsColor: .textBackgroundColor))
+      .overlay(alignment: .bottom) {
+        if isTerminalHovered {
+          Button {
+            let title: String
+            let auxIndex = selectedTab - 1
+            if selectedTab == 0 || auxIndex >= process.auxiliaryCommands.count {
+              title = process.name
+            } else {
+              let aux = process.auxiliaryCommands[auxIndex]
+              title = "\(process.name) — \(aux.name)"
+            }
+            PopOutWindowManager.shared.openWindow(buffer: currentBuffer, title: title)
+          } label: {
+            HStack(spacing: 4) {
+              Text("Pop Out")
+                .font(.system(size: 11, weight: .medium))
+              Image(systemName: "arrow.up.forward.app")
+                .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial)
+          }
+          .buttonStyle(.plain)
+          .transition(.opacity)
+        }
+      }
+      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+      )
+      .onHover { hovering in
+        withAnimation(.easeInOut(duration: 0.15)) {
+          isTerminalHovered = hovering
+        }
+      }
+      .padding(.horizontal, 12)
+      .padding(.bottom, 12)
     }
+    // Reset tab if aux commands were removed during edit
+    .onChange(of: process.auxiliaryCommands.count) {
+      if selectedTab > process.auxiliaryCommands.count {
+        selectedTab = 0
+      }
+    }
+  }
+
+  private var currentBuffer: TerminalBuffer {
+    if selectedTab == 0 {
+      return process.buffer
+    }
+    let auxIndex = selectedTab - 1
+    guard auxIndex >= 0, auxIndex < process.auxiliaryCommands.count else {
+      return process.buffer
+    }
+    return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
+  }
 }
-

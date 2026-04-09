@@ -1,0 +1,17 @@
+indentation: 2
+line_length:
+  warning: 120
+  error: 200
+function_body_length:
+  warning: 80
+  error: 120
+cyclomatic_complexity:
+  warning: 25
+  error: 40
+identifier_name:
+  min_length: 1
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+excluded:
+  - .build
