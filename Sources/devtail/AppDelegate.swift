@@ -4,9 +4,30 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var store: ProcessStore?
 
+    private var signalSource: DispatchSourceSignal?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Ensure child processes are cleaned up even if we're killed with SIGTERM
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                self?.performCleanup()
+            }
+            exit(0)
+        }
+        source.resume()
+        signalSource = source
+    }
+
     nonisolated func applicationWillTerminate(_ notification: Notification) {
         MainActor.assumeIsolated {
-            store?.stopAllForQuit()
+            performCleanup()
         }
+    }
+
+    private func performCleanup() {
+        PopOutWindowManager.shared.closeAll()
+        store?.stopAllForQuit()
     }
 }

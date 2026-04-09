@@ -58,6 +58,10 @@ final class ProcessStore {
     func removeProcess(id: UUID) {
         if let process = processes.first(where: { $0.id == id }) {
             process.stop()
+            PopOutWindowManager.shared.closeWindow(for: process.buffer)
+            for aux in process.auxiliaryCommands {
+                PopOutWindowManager.shared.closeWindow(for: process.bufferFor(auxiliary: aux.id))
+            }
         }
         withAnimation(.spring(duration: 0.3)) {
             processes.removeAll { $0.id == id }

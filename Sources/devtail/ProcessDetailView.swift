@@ -7,6 +7,7 @@ struct ProcessDetailView: View {
     var onEdit: () -> Void
 
     @State private var selectedTab = 0
+    @State private var isTerminalHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -98,6 +99,38 @@ struct ProcessDetailView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
             )
+            .overlay(alignment: .topTrailing) {
+                if isTerminalHovered {
+                    Button {
+                        let title: String
+                        if selectedTab == 0 {
+                            title = process.name
+                        } else {
+                            let aux = process.auxiliaryCommands[selectedTab - 1]
+                            title = "\(process.name) — \(aux.name)"
+                        }
+                        PopOutWindowManager.shared.openWindow(buffer: currentBuffer, title: title)
+                    } label: {
+                        Image(systemName: "arrow.up.forward.app")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .padding(5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 6)
+                    .padding(.trailing, 20)
+                    .transition(.opacity)
+                }
+            }
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isTerminalHovered = hovering
+                }
+            }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }

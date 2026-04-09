@@ -60,20 +60,20 @@ struct ProcessCardView: View {
                     }
                 }
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(
-                        isHovered
-                            ? Color.accentColor.opacity(0.3)
-                            : Color(nsColor: .separatorColor),
-                        lineWidth: isHovered ? 1.5 : 1
-                    )
-            )
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(
+                    isHovered
+                        ? Color.accentColor.opacity(0.3)
+                        : Color(nsColor: .separatorColor),
+                    lineWidth: isHovered ? 1.5 : 1
+                )
+        )
             .scaleEffect(isHovered ? 1.01 : 1.0)
         }
         .buttonStyle(.plain)
