@@ -1,6 +1,17 @@
-# devtail
+<p align="center">
+  <img src="web/public/favicon.svg" width="80" height="80" alt="devtail">
+</p>
 
-A macOS menu bar app for launching and monitoring local development processes.
+<h1 align="center">devtail</h1>
+
+<p align="center">
+  A macOS menu bar app for launching and monitoring local development processes.<br>
+  Free up your terminal for AI agents — your dev servers live in the menu bar now.
+</p>
+
+<p align="center">
+  <a href="https://tsconfigdotjson.github.io/devtail/devtail.dmg"><strong>Download for macOS &rarr;</strong></a>
+</p>
 
 ## Features
 
