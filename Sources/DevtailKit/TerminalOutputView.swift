@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Full Output View (NSTextView-backed for performance + selection)
-
 public struct TerminalOutputView: View {
   let buffer: TerminalBuffer
   var fontSize: CGFloat
@@ -13,8 +11,7 @@ public struct TerminalOutputView: View {
   }
 
   public var body: some View {
-    // Reading version registers @Observable tracking
-    let _ = buffer.version  // swiftlint:disable:this redundant_discardable_let
+    let _ = buffer.version
     TerminalNSView(buffer: buffer, version: buffer.version, fontSize: fontSize)
   }
 }
@@ -65,7 +62,6 @@ private struct TerminalNSView: NSViewRepresentable {
   class Coordinator {
     weak var textView: NSTextView?
 
-    // Cached objects — avoid recreating on every 50ms update
     private var cachedFontSize: CGFloat = 0
     private var regularFont: NSFont?
     private var boldFont: NSFont?
@@ -77,9 +73,6 @@ private struct TerminalNSView: NSViewRepresentable {
       guard let storage = textView.textStorage else { return }
       guard let scrollView = textView.enclosingScrollView else { return }
 
-      // Check if we're at (or near) the bottom before updating content.
-      // If so, follow new output. If the user scrolled up, stay put.
-      // On first update, always scroll to bottom (new view showing existing content).
       let clipView = scrollView.contentView
       let maxScrollY = max(textView.frame.height - clipView.bounds.height, 0)
       let isAtBottom = isFirstUpdate || clipView.bounds.origin.y >= maxScrollY - 20
@@ -94,9 +87,6 @@ private struct TerminalNSView: NSViewRepresentable {
       if isAtBottom {
         if isFirstUpdate {
           isFirstUpdate = false
-          // Defer scroll until after the view has been laid out by the window system.
-          // On first render, geometry is zero-sized so an immediate scroll has no effect.
-          // We need two run-loop passes: one for the window to lay out, one to scroll.
           DispatchQueue.main.async { [weak textView] in
             guard let textView, let sv = textView.enclosingScrollView else { return }
             sv.layoutSubtreeIfNeeded()
@@ -168,8 +158,6 @@ private struct TerminalNSView: NSViewRepresentable {
   }
 }
 
-// MARK: - Preview Text (for cards, compact display)
-
 public struct TerminalPreviewText: View {
   let buffer: TerminalBuffer
   var lineLimit: Int
@@ -225,8 +213,6 @@ public struct TerminalPreviewText: View {
     return result
   }
 }
-
-// MARK: - ANSIColor → SwiftUI Color
 
 extension ANSIColor {
   public var swiftUIColor: Color {
@@ -298,8 +284,6 @@ extension ANSIColor {
     }
   }
 }
-
-// MARK: - ANSIColor → NSColor
 
 extension ANSIColor {
   public var nsColor: NSColor {

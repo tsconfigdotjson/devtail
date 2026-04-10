@@ -66,7 +66,6 @@ function App() {
     <div className="relative min-h-screen bg-background text-foreground font-sans">
       <div className="grain" aria-hidden="true" />
 
-      {/* ── Nav ── */}
       <nav className="flex items-center justify-between px-6 md:px-12 lg:px-16 py-6">
         <a
           href="/"
@@ -75,17 +74,18 @@ function App() {
           devtail
         </a>
         <div className="flex items-center gap-6 md:gap-8">
+          <a href="https://github.com/tsconfigdotjson/devtail" className="ghost-link font-mono">
+            GitHub
+          </a>
           <a href="#download" className="cta-link text-sm font-mono">
             Download
           </a>
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <section className="px-6 md:px-12 lg:px-16 pt-16 md:pt-24 lg:pt-36 pb-20 md:pb-28">
         <div className="max-w-[1200px] mx-auto">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-8 items-start">
-            {/* Text */}
             <div className="lg:col-span-7">
               <h1 className="hero-stagger text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1] tracking-[-0.04em]">
                 <span className="block">YOUR TERMINAL</span>
@@ -118,7 +118,6 @@ function App() {
               </div>
             </div>
 
-            {/* Screenshot */}
             <div className="hero-stagger lg:col-span-5 lg:pt-4">
               <div className="relative">
                 <div className="absolute -top-px left-0 h-[2px] w-16 bg-accent" />
@@ -140,7 +139,6 @@ function App() {
 
       <hr className="border-border mx-6 md:mx-12 lg:mx-16 border-t" />
 
-      {/* ── Features ── */}
       <section className="px-6 md:px-12 lg:px-16 py-20 md:py-28 lg:py-32">
         <div className="max-w-[1200px] mx-auto">
           <p className="scroll-reveal font-mono text-xs tracking-[0.2em] text-muted-foreground uppercase mb-12 md:mb-16">
@@ -154,7 +152,6 @@ function App() {
                 className="scroll-reveal feature-card"
                 style={{ "--delay": `${i * 80}ms` } as React.CSSProperties}
               >
-                {/* Decorative bg number */}
                 <span
                   className="absolute -top-3 -right-1 font-mono text-[5rem] md:text-[6rem] font-black leading-none select-none pointer-events-none opacity-[0.03] text-foreground"
                   aria-hidden="true"
@@ -181,7 +178,6 @@ function App() {
 
       <hr className="border-border mx-6 md:mx-12 lg:mx-16 border-t" />
 
-      {/* ── How It Works ── */}
       <section className="px-6 md:px-12 lg:px-16 py-20 md:py-28 lg:py-32">
         <div className="max-w-[1200px] mx-auto">
           <p className="scroll-reveal font-mono text-xs tracking-[0.2em] text-muted-foreground uppercase mb-12 md:mb-16">
@@ -210,7 +206,6 @@ function App() {
         </div>
       </section>
 
-      {/* ── Final CTA (inverted) ── */}
       <section
         id="download"
         className="bg-foreground text-background px-6 md:px-12 lg:px-16 py-20 md:py-28 lg:py-40"
@@ -239,7 +234,6 @@ function App() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
       <footer className="px-6 md:px-12 lg:px-16 py-6 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-3">
         <span className="font-mono text-xs tracking-[0.1em] text-muted-foreground">
           devtail

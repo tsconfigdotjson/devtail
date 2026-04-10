@@ -1,12 +1,10 @@
 import Foundation
 
-// MARK: - Types
-
 public enum ANSIColor: Sendable, Hashable {
   case `default`
-  case standard(UInt8)  // 0-7: black, red, green, yellow, blue, magenta, cyan, white
-  case bright(UInt8)  // 0-7: bright variants
-  case palette(UInt8)  // 0-255
+  case standard(UInt8)
+  case bright(UInt8)
+  case palette(UInt8)
   case rgb(UInt8, UInt8, UInt8)
 }
 
@@ -41,8 +39,6 @@ public enum TerminalAction: Sendable {
   case cursorUp(Int)
 }
 
-// MARK: - Parser
-
 public struct ANSIParser: Sendable {
   public var currentStyle = ANSIStyle()
 
@@ -64,7 +60,7 @@ public struct ANSIParser: Sendable {
       let ch = input[i]
 
       switch ch {
-      case "\u{1B}":  // ESC
+      case "\u{1B}":
         flushText()
         let next = input.index(after: i)
         if next < input.endIndex && input[next] == "[" {
@@ -77,18 +73,11 @@ public struct ANSIParser: Sendable {
             continue
           }
         }
-        // Skip unrecognized escape — advance past ESC
         i = input.index(after: i)
         continue
 
       case "\r":
         flushText()
-        let next = input.index(after: i)
-        if next < input.endIndex && input[next] == "\n" {
-          actions.append(.newline)
-          i = input.index(after: next)
-          continue
-        }
         actions.append(.carriageReturn)
 
       case "\n":
@@ -97,7 +86,6 @@ public struct ANSIParser: Sendable {
 
       default:
         if let ascii = ch.asciiValue, ascii < 32, ascii != 9 {
-          // Skip control characters except tab
         } else {
           textBuf.append(ch)
         }
@@ -109,8 +97,6 @@ public struct ANSIParser: Sendable {
     flushText()
     return actions
   }
-
-  // MARK: - CSI Parsing
 
   private mutating func parseCSI(_ input: String, from start: String.Index) -> (TerminalAction?, String.Index)? {
     var paramStr = ""
@@ -129,22 +115,22 @@ public struct ANSIParser: Sendable {
       i = input.index(after: i)
     }
 
-    return nil  // Incomplete sequence
+    return nil
   }
 
   private mutating func handleCSI(params: String, final: Character) -> TerminalAction? {
     let parts = params.split(separator: ";", omittingEmptySubsequences: false).map { Int($0) }
 
     switch final {
-    case "m":  // SGR — Select Graphic Rendition
+    case "m":
       applySGR(parts)
       return nil
 
-    case "K":  // Erase in Line
+    case "K":
       let mode = parts.first.flatMap({ $0 }) ?? 0
       return mode == 2 ? .eraseLine : .eraseToEndOfLine
 
-    case "A":  // Cursor Up
+    case "A":
       let n = parts.first.flatMap({ $0 }) ?? 1
       return .cursorUp(max(1, n))
 
@@ -152,8 +138,6 @@ public struct ANSIParser: Sendable {
       return nil
     }
   }
-
-  // MARK: - SGR
 
   private mutating func applySGR(_ params: [Int?]) {
     if params.isEmpty || (params.count == 1 && params[0] == nil) {
@@ -179,7 +163,6 @@ public struct ANSIParser: Sendable {
       case 24: currentStyle.underline = false
       case 29: currentStyle.strikethrough = false
 
-      // Foreground colors
       case 30...37:
         currentStyle.foreground = .standard(UInt8(code - 30))
       case 38:
@@ -190,7 +173,6 @@ public struct ANSIParser: Sendable {
       case 39:
         currentStyle.foreground = .default
 
-      // Background colors
       case 40...47:
         currentStyle.background = .standard(UInt8(code - 40))
       case 48:
@@ -201,11 +183,9 @@ public struct ANSIParser: Sendable {
       case 49:
         currentStyle.background = .default
 
-      // Bright foreground
       case 90...97:
         currentStyle.foreground = .bright(UInt8(code - 90))
 
-      // Bright background
       case 100...107:
         currentStyle.background = .bright(UInt8(code - 100))
 
@@ -222,10 +202,10 @@ public struct ANSIParser: Sendable {
     let mode = params[index] ?? 0
 
     switch mode {
-    case 5:  // 256-color palette
+    case 5:
       guard index + 1 < params.count, let n = params[index + 1] else { return nil }
       return (.palette(UInt8(clamping: n)), 2)
-    case 2:  // Truecolor RGB
+    case 2:
       guard index + 3 < params.count else { return nil }
       let r = UInt8(clamping: params[index + 1] ?? 0)
       let g = UInt8(clamping: params[index + 2] ?? 0)

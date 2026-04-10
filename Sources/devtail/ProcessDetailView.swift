@@ -11,7 +11,6 @@ struct ProcessDetailView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Process info header
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 8) {
           Text(process.name)
@@ -68,7 +67,6 @@ struct ProcessDetailView: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
 
-      // Tab picker for output sources
       if !process.auxiliaryCommands.isEmpty {
         Picker("", selection: $selectedTab) {
           Text("Output").tag(0)
@@ -82,7 +80,6 @@ struct ProcessDetailView: View {
         .padding(.bottom, 8)
       }
 
-      // Terminal output
       Group {
         if currentBuffer.hasContent {
           TerminalOutputView(buffer: currentBuffer)
@@ -135,7 +132,6 @@ struct ProcessDetailView: View {
       .padding(.horizontal, 12)
       .padding(.bottom, 12)
     }
-    // Reset tab if aux commands were removed during edit
     .onChange(of: process.auxiliaryCommands.count) {
       if selectedTab > process.auxiliaryCommands.count {
         selectedTab = 0

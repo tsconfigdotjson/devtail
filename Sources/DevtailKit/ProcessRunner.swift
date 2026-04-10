@@ -4,8 +4,6 @@ import Foundation
 public final class ProcessRunner {
   private var process: Process?
   private var readTask: Task<Void, Never>?
-  /// Stored separately because the shell may exit before its children.
-  /// We need the PID to kill the entire process group even after the shell is gone.
   private var launchedPID: Int32 = 0
 
   public init() {}
@@ -99,8 +97,6 @@ public final class ProcessRunner {
     let pid = launchedPID
     guard pid != 0 else { return }
 
-    // Always kill the process group — the shell may have exited
-    // but npm/node/next-server children can still be alive.
     kill(-pid, SIGTERM)
 
     Task.detached {
@@ -114,24 +110,19 @@ public final class ProcessRunner {
     readTask = nil
   }
 
-  /// Synchronous stop that blocks until the process group is dead.
-  /// Only use during app quit — blocks the main thread.
   public func stopSync(timeout: TimeInterval = 2.0) {
     let pid = launchedPID
     guard pid != 0 else { return }
 
     kill(-pid, SIGTERM)
 
-    // Poll until the group leader is gone
     let deadline = Date().addingTimeInterval(timeout)
     while kill(pid, 0) == 0 && Date() < deadline {
       Thread.sleep(forTimeInterval: 0.01)
     }
 
-    // Force kill any survivors
     if kill(pid, 0) == 0 {
       kill(-pid, SIGKILL)
-      // Brief wait for kernel cleanup
       Thread.sleep(forTimeInterval: 0.05)
     }
 

@@ -1,7 +1,5 @@
 import SwiftUI
 
-// MARK: - Terminal Line
-
 public struct TerminalLine: Sendable, Identifiable {
   public let id: Int
   public var spans: [StyledSpan]
@@ -19,8 +17,6 @@ public struct TerminalLine: Sendable, Identifiable {
     spans.map(\.text).joined()
   }
 }
-
-// MARK: - Terminal Buffer
 
 @MainActor
 @Observable

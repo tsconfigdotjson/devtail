@@ -6,14 +6,12 @@ import SwiftUI
 final class PopOutWindowManager {
   static let shared = PopOutWindowManager()
 
-  /// Keyed by buffer's ObjectIdentifier so each buffer gets one window.
   private var windows: [ObjectIdentifier: NSWindow] = [:]
   private var delegates: [ObjectIdentifier: WindowCloseDelegate] = [:]
 
   func openWindow(buffer: TerminalBuffer, title: String) {
     let key = ObjectIdentifier(buffer)
 
-    // If window already exists, bring it to front
     if let existing = windows[key], existing.isVisible {
       existing.makeKeyAndOrderFront(nil)
       NSApp.activate()
@@ -76,8 +74,6 @@ final class PopOutWindowManager {
     }
   }
 }
-
-// MARK: - Window Close Delegate
 
 private final class WindowCloseDelegate: NSObject, NSWindowDelegate, @unchecked Sendable {
   let onClose: @MainActor () -> Void

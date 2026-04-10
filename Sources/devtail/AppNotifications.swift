@@ -26,8 +26,6 @@ enum AppNotifications {
     }
   }
 
-  // MARK: - Bundled .app — UNUserNotificationCenter
-
   private static func sendUNNotification(title: String, body: String) {
     let content = UNMutableNotificationContent()
     content.title = title
@@ -41,8 +39,6 @@ enum AppNotifications {
     )
     UNUserNotificationCenter.current().add(request)
   }
-
-  // MARK: - Unbundled executable — osascript fallback
 
   private static func sendScriptNotification(title: String, body: String) {
     let escaped = { (s: String) -> String in

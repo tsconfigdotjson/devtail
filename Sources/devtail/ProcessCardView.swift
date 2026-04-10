@@ -12,7 +12,6 @@ struct ProcessCardView: View {
   var body: some View {
     Button(action: onSelect) {
       VStack(alignment: .leading, spacing: 8) {
-        // Name and status
         HStack {
           Text(process.name)
             .font(.system(size: 13, weight: .semibold))
@@ -23,7 +22,6 @@ struct ProcessCardView: View {
           StatusDot(isRunning: process.isRunning)
         }
 
-        // Command output preview
         if process.buffer.hasContent {
           TerminalBlock {
             TerminalPreviewText(
@@ -34,7 +32,6 @@ struct ProcessCardView: View {
           }
         }
 
-        // Auxiliary command previews
         ForEach(process.auxiliaryCommands) { aux in
           let auxBuf = process.bufferFor(auxiliary: aux.id)
           VStack(alignment: .leading, spacing: 2) {
@@ -93,8 +90,6 @@ struct ProcessCardView: View {
     }
   }
 }
-
-// MARK: - Shared Components
 
 struct StatusDot: View {
   let isRunning: Bool

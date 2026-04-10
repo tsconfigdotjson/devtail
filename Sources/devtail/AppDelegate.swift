@@ -7,7 +7,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private var signalSource: DispatchSourceSignal?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    // Ensure child processes are cleaned up even if we're killed with SIGTERM
     signal(SIGTERM, SIG_IGN)
     let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
     source.setEventHandler { [weak self] in
