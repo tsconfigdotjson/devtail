@@ -14,7 +14,7 @@ struct ProcessCardView: View {
       PopOutWindowManager.shared.openWindow(buffer: buffer, title: title)
     } label: {
       Image(systemName: "arrow.up.forward.app")
-        .font(.system(size: 9, weight: .medium))
+        .font(.system(size: 11, weight: .medium))
         .foregroundStyle(.tertiary)
         .padding(4)
         .contentShape(Rectangle())
