@@ -74,7 +74,7 @@ function App() {
           devtail
         </a>
         <div className="flex items-center gap-6 md:gap-8">
-          <a href="https://github.com/GratefulWorkspace/devtail" className="ghost-link font-mono">
+          <a href="https://github.com/tsconfigdotjson/devtail" className="ghost-link font-mono">
             GitHub
           </a>
           <a href="#download" className="cta-link text-sm font-mono">
