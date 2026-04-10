@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────
-APP_NAME="Devtail"
+APP_NAME="devtail"
 BUNDLE_ID="com.leerosen.devtail"
 EXECUTABLE="devtail"
 VERSION="${VERSION:-1.0.0}"
@@ -37,6 +37,21 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$BUILD_DIR/$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE"
 
+# Compile Liquid Glass app icon
+if [ -d "$PROJECT_DIR/icon.icon" ]; then
+  echo "▸ Compiling Liquid Glass icon…"
+  actool "$PROJECT_DIR/icon.icon" --compile "$APP_BUNDLE/Contents/Resources" \
+    --output-format human-readable-text --notices --warnings --errors \
+    --output-partial-info-plist /tmp/devtail-icon-info.plist \
+    --app-icon icon --include-all-app-icons \
+    --enable-on-demand-resources NO \
+    --development-region en \
+    --target-device mac \
+    --minimum-deployment-target 26.0 \
+    --platform macosx
+  rm -f /tmp/devtail-icon-info.plist
+fi
+
 cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -61,6 +76,10 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+    <key>CFBundleIconName</key>
+    <string>icon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

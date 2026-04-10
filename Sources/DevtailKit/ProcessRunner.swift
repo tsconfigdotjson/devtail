@@ -24,17 +24,19 @@ public final class ProcessRunner {
 
     let proc = Process()
     proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    proc.arguments = ["-l", "-c", command]
+    proc.arguments = ["-li", "-c", command]
 
     if let dir = workingDirectory, !dir.isEmpty {
       let expanded = NSString(string: dir).expandingTildeInPath
       proc.currentDirectoryURL = URL(fileURLWithPath: expanded)
     }
 
-    var env = ProcessInfo.processInfo.environment
-    env["FORCE_COLOR"] = "1"
-    env["TERM"] = "xterm-256color"
-    proc.environment = env
+    proc.environment = [
+      "HOME": NSHomeDirectory(),
+      "USER": NSUserName(),
+      "FORCE_COLOR": "1",
+      "TERM": "xterm-256color",
+    ]
 
     let pipe = Pipe()
     proc.standardOutput = pipe
