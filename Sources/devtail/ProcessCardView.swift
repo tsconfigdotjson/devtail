@@ -9,6 +9,20 @@ struct ProcessCardView: View {
 
   @State private var isHovered = false
 
+  private func popOutButton(buffer: TerminalBuffer, title: String) -> some View {
+    Button {
+      PopOutWindowManager.shared.openWindow(buffer: buffer, title: title)
+    } label: {
+      Image(systemName: "arrow.up.forward.app")
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(.tertiary)
+        .padding(4)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help("Pop out")
+  }
+
   var body: some View {
     Button(action: onSelect) {
       VStack(alignment: .leading, spacing: 8) {
@@ -29,6 +43,9 @@ struct ProcessCardView: View {
               lineLimit: 3,
               fontSize: 10
             )
+          }
+          .overlay(alignment: .topTrailing) {
+            popOutButton(buffer: process.buffer, title: process.name)
           }
         }
 
@@ -53,6 +70,12 @@ struct ProcessCardView: View {
                   .foregroundStyle(.tertiary)
                   .frame(maxWidth: .infinity, alignment: .leading)
               }
+            }
+            .overlay(alignment: .topTrailing) {
+              popOutButton(
+                buffer: auxBuf,
+                title: "\(process.name) — \(aux.name)"
+              )
             }
           }
         }

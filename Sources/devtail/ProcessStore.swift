@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 final class ProcessStore {
   var processes: [DevProcess]
+  var onIconChange: (() -> Void)?
   private var isQuitting = false
 
   init() {
@@ -22,7 +23,10 @@ final class ProcessStore {
     }
 
     for process in processes {
-      process.onStateChange = { [weak self] in self?.save() }
+      process.onStateChange = { [weak self] in
+        self?.save()
+        self?.onIconChange?()
+      }
     }
 
     let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
@@ -44,7 +48,10 @@ final class ProcessStore {
       workingDirectory: workingDirectory,
       auxiliaryCommands: auxiliaryCommands
     )
-    process.onStateChange = { [weak self] in self?.save() }
+    process.onStateChange = { [weak self] in
+      self?.save()
+      self?.onIconChange?()
+    }
     withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
       processes.insert(process, at: 0)
     }
