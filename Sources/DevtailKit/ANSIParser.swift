@@ -78,12 +78,6 @@ public struct ANSIParser: Sendable {
 
       case "\r":
         flushText()
-        let next = input.index(after: i)
-        if next < input.endIndex && input[next] == "\n" {
-          actions.append(.newline)
-          i = input.index(after: next)
-          continue
-        }
         actions.append(.carriageReturn)
 
       case "\n":

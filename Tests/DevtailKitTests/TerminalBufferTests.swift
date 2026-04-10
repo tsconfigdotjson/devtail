@@ -5,8 +5,6 @@ import Testing
 @MainActor
 struct TerminalBufferTests {
 
-  // MARK: - Initial state
-
   @Test func initialStateHasOneEmptyLine() {
     let buffer = TerminalBuffer()
     #expect(buffer.lines.count == 1)
@@ -22,8 +20,6 @@ struct TerminalBufferTests {
     let buffer = TerminalBuffer()
     #expect(buffer.version == 0)
   }
-
-  // MARK: - Appending text
 
   @Test func appendPlainTextMakesHasContentTrue() {
     let buffer = TerminalBuffer()
@@ -46,8 +42,6 @@ struct TerminalBufferTests {
     #expect(buffer.lines[0].plainText == "hello world")
   }
 
-  // MARK: - Newline
-
   @Test func newlineIncrementsCursorAndAddsNewLine() {
     let buffer = TerminalBuffer()
     buffer.append("line1\nline2")
@@ -59,7 +53,6 @@ struct TerminalBufferTests {
   @Test func multipleNewlinesCreateMultipleLines() {
     let buffer = TerminalBuffer()
     buffer.append("a\nb\nc\n")
-    // "a", "b", "c", and an empty line after trailing newline
     #expect(buffer.lines.count == 4)
     #expect(buffer.lines[0].plainText == "a")
     #expect(buffer.lines[1].plainText == "b")
@@ -76,8 +69,6 @@ struct TerminalBufferTests {
     #expect(buffer.lines[1].plainText == "line2")
   }
 
-  // MARK: - Carriage return
-
   @Test func carriageReturnClearsCurrentLineSpans() {
     let buffer = TerminalBuffer()
     buffer.append("old text\rnew text")
@@ -90,8 +81,6 @@ struct TerminalBufferTests {
     buffer.append("\rtext")
     #expect(buffer.lines[0].plainText == "text")
   }
-
-  // MARK: - Erase line
 
   @Test func eraseLineClearsCurrentLine() {
     let buffer = TerminalBuffer()
@@ -112,30 +101,23 @@ struct TerminalBufferTests {
     #expect(buffer.lines[1].isEmpty)
   }
 
-  // MARK: - Cursor up
-
   @Test func cursorUpMovesBackAndClearsTargetLine() {
     let buffer = TerminalBuffer()
     buffer.append("line1\nline2\n\u{1B}[2Areplaced")
-    // Cursor was at row 2, moved up by 2 to row 0, cleared it
     #expect(buffer.lines[0].plainText == "replaced")
   }
 
   @Test func cursorUpDoesntGoBelowZero() {
     let buffer = TerminalBuffer()
     buffer.append("only line\u{1B}[99Astill here")
-    // Cursor was at 0, up 99 clamps to 0
     #expect(buffer.lines[0].plainText == "still here")
   }
 
   @Test func cursorUpBy1() {
     let buffer = TerminalBuffer()
     buffer.append("line1\nline2\u{1B}[Areplaced")
-    // From row 1, move up 1 to row 0
     #expect(buffer.lines[0].plainText == "replaced")
   }
-
-  // MARK: - Version tracking
 
   @Test func versionIncrementsOnEveryAppend() {
     let buffer = TerminalBuffer()
@@ -156,8 +138,6 @@ struct TerminalBufferTests {
     #expect(buffer.version == vBefore + 1)
   }
 
-  // MARK: - Clear
-
   @Test func clearResetsToInitialState() {
     let buffer = TerminalBuffer()
     buffer.append("line1\nline2\nline3")
@@ -169,19 +149,14 @@ struct TerminalBufferTests {
 
   @Test func clearResetsParser() {
     let buffer = TerminalBuffer()
-    // Set a style before clear
     buffer.append("\u{1B}[31mred text")
     buffer.clear()
-    // After clear, parser should be reset so new text has default style
     buffer.append("plain")
     #expect(buffer.lines[0].spans[0].style == ANSIStyle())
   }
 
-  // MARK: - Buffer trimming (maxLines)
-
   @Test func bufferTrimsWhenExceedingMaxLines() {
     let buffer = TerminalBuffer(maxLines: 5)
-    // Append enough lines to exceed maxLines
     buffer.append("1\n2\n3\n4\n5\n6\n7")
     #expect(buffer.lines.count <= 5)
   }
@@ -189,7 +164,6 @@ struct TerminalBufferTests {
   @Test func trimmedBufferKeepsLatestLines() {
     let buffer = TerminalBuffer(maxLines: 3)
     buffer.append("a\nb\nc\nd\ne")
-    // Should only keep the last 3 lines
     #expect(buffer.lines.count == 3)
     let texts = buffer.lines.map(\.plainText)
     #expect(texts.contains("e"))
@@ -198,8 +172,6 @@ struct TerminalBufferTests {
   @Test func cursorAdjustsAfterTrim() {
     let buffer = TerminalBuffer(maxLines: 3)
     buffer.append("1\n2\n3\n4\n5")
-    // After trimming, cursor should still be valid
-    // Appending more text should work without crash
     buffer.append(" more")
     #expect(buffer.lines.last?.plainText.contains("more") == true)
   }
@@ -212,8 +184,6 @@ struct TerminalBufferTests {
     #expect(buffer.lines[1].plainText == "b")
     #expect(buffer.lines[2].plainText == "c")
   }
-
-  // MARK: - ANSI colors flow through parser
 
   @Test func ansiColorsFlowThroughCorrectly() {
     let buffer = TerminalBuffer()
@@ -234,15 +204,11 @@ struct TerminalBufferTests {
     #expect(spans[0].style.foreground == .standard(4))
   }
 
-  // MARK: - Line IDs
-
   @Test func lineIDsAreUniqueAndIncrementing() {
     let buffer = TerminalBuffer()
     buffer.append("line1\nline2\nline3")
     let ids = buffer.lines.map(\.id)
-    // All IDs should be unique
     #expect(Set(ids).count == ids.count)
-    // IDs should be incrementing
     for i in 1..<ids.count {
       #expect(ids[i] > ids[i - 1])
     }
@@ -255,8 +221,6 @@ struct TerminalBufferTests {
     let secondID = buffer.lines[0].id
     #expect(secondID > firstID)
   }
-
-  // MARK: - TerminalLine properties
 
   @Test func plainTextJoinsSpans() {
     let line = TerminalLine(
@@ -299,13 +263,10 @@ struct TerminalBufferTests {
     #expect(line.plainText == "")
   }
 
-  // MARK: - Edge cases
-
   @Test func appendEmptyString() {
     let buffer = TerminalBuffer()
     let vBefore = buffer.version
     buffer.append("")
-    // Version still increments (append always increments)
     #expect(buffer.version == vBefore + 1)
     #expect(buffer.lines.count == 1)
     #expect(buffer.hasContent == false)
@@ -316,7 +277,6 @@ struct TerminalBufferTests {
     for i in 0..<100 {
       buffer.append("line\(i)\n")
     }
-    // Should have 101 lines (100 content lines + 1 trailing empty)
     #expect(buffer.lines.count == 101)
     #expect(buffer.lines[0].plainText == "line0")
     #expect(buffer.lines[99].plainText == "line99")

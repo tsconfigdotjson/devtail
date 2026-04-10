@@ -1,13 +1,7 @@
 import Foundation
 import Testing
 
-/// These tests verify the Codable round-trip behavior of the persistence model.
-/// Since `SavedProcess` lives in the executable target and cannot be imported,
-/// we replicate the identical Codable structures here and verify encoding/decoding
-/// logic that mirrors Sources/devtail/Persistence.swift.
 struct PersistenceTests {
-
-  // MARK: - Mirror of SavedProcess (must match Sources/devtail/Persistence.swift)
 
   private struct SavedProcess: Codable, Equatable {
     let id: UUID
@@ -24,8 +18,6 @@ struct PersistenceTests {
     }
   }
 
-  // MARK: - Helpers
-
   private let encoder = JSONEncoder()
   private let decoder = JSONDecoder()
 
@@ -33,8 +25,6 @@ struct PersistenceTests {
     let data = try encoder.encode(processes)
     return try decoder.decode([SavedProcess].self, from: data)
   }
-
-  // MARK: - Round-trip tests
 
   @Test func saveAndLoadRoundTripPreservesData() throws {
     let id = UUID()
@@ -161,8 +151,6 @@ struct PersistenceTests {
     #expect(loaded[0].id == id)
   }
 
-  // MARK: - UserDefaults-style edge cases
-
   @Test func malformedJSONReturnsEmptyArray() {
     let badData = "not valid json".data(using: .utf8)!
     let result = try? JSONDecoder().decode([SavedProcess].self, from: badData)
@@ -170,7 +158,6 @@ struct PersistenceTests {
   }
 
   @Test func missingFieldsFailToDecode() {
-    // JSON with missing required field "command"
     let json = """
       [{"id":"12345678-1234-1234-1234-123456789ABC","name":"Test","workingDirectory":"","auxiliaryCommands":[],"wasRunning":false}]
       """
