@@ -70,6 +70,7 @@ private struct TerminalNSView: NSViewRepresentable {
     private var regularFont: NSFont?
     private var boldFont: NSFont?
     private var colorCache: [ANSIColor: NSColor] = [:]
+    private var isFirstUpdate = true
 
     func update(buffer: TerminalBuffer, fontSize: CGFloat) {
       guard let textView else { return }
@@ -78,9 +79,10 @@ private struct TerminalNSView: NSViewRepresentable {
 
       // Check if we're at (or near) the bottom before updating content.
       // If so, follow new output. If the user scrolled up, stay put.
+      // On first update, always scroll to bottom (new view showing existing content).
       let clipView = scrollView.contentView
       let maxScrollY = max(textView.frame.height - clipView.bounds.height, 0)
-      let isAtBottom = clipView.bounds.origin.y >= maxScrollY - 20
+      let isAtBottom = isFirstUpdate || clipView.bounds.origin.y >= maxScrollY - 20
 
       ensureFontCache(fontSize: fontSize)
       let attrStr = buildAttributedString(buffer: buffer, fontSize: fontSize)
@@ -90,7 +92,19 @@ private struct TerminalNSView: NSViewRepresentable {
       storage.endEditing()
 
       if isAtBottom {
-        textView.scrollToEndOfDocument(nil)
+        if isFirstUpdate {
+          isFirstUpdate = false
+          // Defer scroll until after the view has been laid out by the window system.
+          // On first render, geometry is zero-sized so an immediate scroll has no effect.
+          // We need two run-loop passes: one for the window to lay out, one to scroll.
+          DispatchQueue.main.async { [weak textView] in
+            guard let textView, let sv = textView.enclosingScrollView else { return }
+            sv.layoutSubtreeIfNeeded()
+            textView.scrollToEndOfDocument(nil)
+          }
+        } else {
+          textView.scrollToEndOfDocument(nil)
+        }
       }
     }
 
