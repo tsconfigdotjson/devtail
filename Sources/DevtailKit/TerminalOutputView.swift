@@ -74,6 +74,13 @@ private struct TerminalNSView: NSViewRepresentable {
     func update(buffer: TerminalBuffer, fontSize: CGFloat) {
       guard let textView else { return }
       guard let storage = textView.textStorage else { return }
+      guard let scrollView = textView.enclosingScrollView else { return }
+
+      // Check if we're at (or near) the bottom before updating content.
+      // If so, follow new output. If the user scrolled up, stay put.
+      let clipView = scrollView.contentView
+      let maxScrollY = max(textView.frame.height - clipView.bounds.height, 0)
+      let isAtBottom = clipView.bounds.origin.y >= maxScrollY - 20
 
       ensureFontCache(fontSize: fontSize)
       let attrStr = buildAttributedString(buffer: buffer, fontSize: fontSize)
@@ -82,7 +89,9 @@ private struct TerminalNSView: NSViewRepresentable {
       storage.setAttributedString(attrStr)
       storage.endEditing()
 
-      textView.scrollToEndOfDocument(nil)
+      if isAtBottom {
+        textView.scrollToEndOfDocument(nil)
+      }
     }
 
     private func ensureFontCache(fontSize: CGFloat) {
