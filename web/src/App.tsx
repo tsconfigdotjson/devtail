@@ -75,9 +75,6 @@ function App() {
           devtail
         </a>
         <div className="flex items-center gap-6 md:gap-8">
-          <a href="https://github.com" className="ghost-link font-mono">
-            GitHub
-          </a>
           <a href="#download" className="cta-link text-sm font-mono">
             Download
           </a>
@@ -106,7 +103,7 @@ function App() {
               </p>
 
               <div className="hero-stagger mt-8 md:mt-10">
-                <a href="#download" className="cta-link text-base">
+                <a href="./devtail.dmg" download className="cta-link text-base">
                   Download for macOS
                   <span aria-hidden="true">&nbsp;&rarr;</span>
                 </a>
@@ -127,7 +124,7 @@ function App() {
                 <div className="absolute -top-px left-0 h-[2px] w-16 bg-accent" />
                 <div className="overflow-hidden border border-border">
                   <img
-                    src="/menubar.png"
+                    src={`${import.meta.env.BASE_URL}menubar.png`}
                     alt="devtail menu bar interface"
                     className="w-full max-w-sm lg:max-w-none transition-transform duration-500 hover:scale-[1.03]"
                   />
@@ -227,7 +224,8 @@ function App() {
 
           <div className="mt-8 md:mt-12">
             <a
-              href="#download"
+              href="./devtail.dmg"
+              download
               className="inline-flex items-center gap-2.5 border border-background text-background uppercase tracking-[0.1em] font-semibold py-3.5 px-6 text-sm no-underline transition-all duration-150 hover:bg-background hover:text-foreground active:translate-y-px"
             >
               Download for macOS
