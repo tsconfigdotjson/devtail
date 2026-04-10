@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://tsconfigdotjson.github.io/devtail/devtail.dmg"><strong>Download for macOS &rarr;</strong></a>
+  <a href="https://tsconfigdotjson.github.io/devtail/"><strong>Download for macOS &rarr;</strong></a>
 </p>
 
 ## Features
