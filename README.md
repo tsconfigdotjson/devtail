@@ -24,3 +24,7 @@ swift run
 ```
 
 The app appears as a terminal icon in your menu bar.
+
+## License
+
+MIT

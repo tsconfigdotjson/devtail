@@ -42,7 +42,6 @@ struct ProcessFormView: View {
               label: "Working Directory", placeholder: "~/projects/app", text: $workingDirectory, monospaced: true)
           }
 
-          // Auxiliary commands section
           VStack(alignment: .leading, spacing: 8) {
             HStack {
               Text("LOG WATCHERS")

@@ -18,7 +18,6 @@ final class DevProcess: Identifiable {
   private var auxiliaryRunners: [UUID: ProcessRunner] = [:]
   private var userStopped = false
 
-  /// Called when running state changes so the store can persist.
   var onStateChange: (() -> Void)?
 
   init(
@@ -44,15 +43,12 @@ final class DevProcess: Identifiable {
     return buf
   }
 
-  /// Remove buffers for auxiliary commands that no longer exist.
   func cleanupAuxiliaryBuffers() {
     let validIDs = Set(auxiliaryCommands.map(\.id))
     for key in auxiliaryBuffers.keys where !validIDs.contains(key) {
       auxiliaryBuffers.removeValue(forKey: key)
     }
   }
-
-  // MARK: - Lifecycle
 
   func start() {
     guard !isRunning else { return }
@@ -100,8 +96,6 @@ final class DevProcess: Identifiable {
     onStateChange?()
   }
 
-  /// Synchronous stop that blocks until all processes are dead.
-  /// Only use during app quit.
   func forceStop() {
     userStopped = true
     runner?.stopSync()
@@ -116,8 +110,6 @@ final class DevProcess: Identifiable {
   func toggle() {
     if isRunning { stop() } else { start() }
   }
-
-  // MARK: - Auxiliary Commands
 
   private func startAuxiliaryCommands() {
     for aux in auxiliaryCommands {

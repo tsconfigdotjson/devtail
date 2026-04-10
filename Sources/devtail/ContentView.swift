@@ -28,8 +28,6 @@ struct ContentView: View {
     .background(.background)
   }
 
-  // MARK: - Header
-
   private var headerBar: some View {
     HStack(spacing: 10) {
       if viewState != .list {
@@ -77,8 +75,6 @@ struct ContentView: View {
     .padding(.vertical, 12)
     .animation(.easeInOut(duration: 0.2), value: viewState)
   }
-
-  // MARK: - Content
 
   @ViewBuilder
   private var contentArea: some View {
@@ -189,9 +185,6 @@ struct ContentView: View {
     .padding(.horizontal, 24)
   }
 
-  // MARK: - Footer
-
-  /// SMAppService requires a proper .app bundle to work.
   private var canManageLaunchAtLogin: Bool {
     Bundle.main.bundlePath.hasSuffix(".app")
   }

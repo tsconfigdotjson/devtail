@@ -21,12 +21,10 @@ final class ProcessStore {
       )
     }
 
-    // Wire up persistence callbacks
     for process in processes {
       process.onStateChange = { [weak self] in self?.save() }
     }
 
-    // Defer auto-start so views have time to initialize
     let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
     if !autoStartIDs.isEmpty {
       Task { @MainActor [weak self] in
@@ -38,8 +36,6 @@ final class ProcessStore {
       }
     }
   }
-
-  // MARK: - CRUD
 
   func addProcess(name: String, command: String, workingDirectory: String, auxiliaryCommands: [AuxiliaryCommand]) {
     let process = DevProcess(
@@ -83,18 +79,14 @@ final class ProcessStore {
     save()
   }
 
-  // MARK: - Persistence
-
   func save() {
     guard !isQuitting else { return }
     Persistence.save(processes)
   }
 
-  /// Save state then synchronously kill all processes.
-  /// Blocks until every child process is dead — only call during app quit.
   func stopAllForQuit() {
     isQuitting = true
-    Persistence.save(processes)  // Captures wasRunning before we stop
+    Persistence.save(processes)
     for process in processes where process.isRunning {
       process.forceStop()
     }
