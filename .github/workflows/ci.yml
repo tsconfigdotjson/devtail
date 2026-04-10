@@ -14,16 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Swift 6.2
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: '6.2'
-
       - name: Swift Format
         run: swift format lint --strict --recursive Sources/
 
       - name: SwiftLint
-        run: brew install swiftlint && swiftlint lint --strict
+        uses: norio-nomura/action-swiftlint@3.2.1
+        with:
+          args: --strict
 
       - name: Build
         run: swift build
