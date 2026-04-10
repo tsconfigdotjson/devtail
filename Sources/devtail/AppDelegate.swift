@@ -58,10 +58,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func updateMenuBarIcon() {
     let anyRunning = store.processes.contains { $0.isRunning }
-    guard let baseImage = NSImage(
-      systemSymbolName: "terminal",
-      accessibilityDescription: "devtail"
-    ) else { return }
+    guard
+      let baseImage = NSImage(
+        systemSymbolName: "terminal",
+        accessibilityDescription: "devtail"
+      )
+    else { return }
 
     let dotSize: CGFloat = 4.5
     let dotGap: CGFloat = 1.5
