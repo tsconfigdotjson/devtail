@@ -13,5 +13,6 @@ identifier_name:
 disabled_rules:
   - trailing_comma
   - opening_brace
+  - redundant_discardable_let
 excluded:
   - .build
