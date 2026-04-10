@@ -3,6 +3,12 @@ import Testing
 
 struct PersistenceTests {
 
+  private struct SavedAuxCommand: Codable, Equatable {
+    let id: UUID
+    var name: String
+    var command: String
+  }
+
   private struct SavedProcess: Codable, Equatable {
     let id: UUID
     var name: String
@@ -10,12 +16,6 @@ struct PersistenceTests {
     var workingDirectory: String
     var auxiliaryCommands: [SavedAuxCommand]
     var wasRunning: Bool
-
-    struct SavedAuxCommand: Codable, Equatable {
-      let id: UUID
-      var name: String
-      var command: String
-    }
   }
 
   private let encoder = JSONEncoder()
@@ -36,7 +36,7 @@ struct PersistenceTests {
         command: "npm run dev",
         workingDirectory: "/Users/test/project",
         auxiliaryCommands: [
-          SavedProcess.SavedAuxCommand(id: auxID, name: "Tailwind", command: "npx tailwindcss --watch")
+          SavedAuxCommand(id: auxID, name: "Tailwind", command: "npx tailwindcss --watch")
         ],
         wasRunning: true
       )
@@ -67,9 +67,9 @@ struct PersistenceTests {
         command: "next dev",
         workingDirectory: "~/projects/app",
         auxiliaryCommands: [
-          SavedProcess.SavedAuxCommand(id: UUID(), name: "CSS", command: "tailwind --watch"),
-          SavedProcess.SavedAuxCommand(id: UUID(), name: "TypeCheck", command: "tsc --watch"),
-          SavedProcess.SavedAuxCommand(id: UUID(), name: "Lint", command: "eslint --watch"),
+          SavedAuxCommand(id: UUID(), name: "CSS", command: "tailwind --watch"),
+          SavedAuxCommand(id: UUID(), name: "TypeCheck", command: "tsc --watch"),
+          SavedAuxCommand(id: UUID(), name: "Lint", command: "eslint --watch"),
         ],
         wasRunning: false
       )
@@ -152,22 +152,24 @@ struct PersistenceTests {
   }
 
   @Test func malformedJSONReturnsEmptyArray() {
-    let badData = "not valid json".data(using: .utf8)!
+    let badData = Data("not valid json".utf8)
     let result = try? JSONDecoder().decode([SavedProcess].self, from: badData)
     #expect(result == nil)
   }
 
   @Test func missingFieldsFailToDecode() {
     let json = """
-      [{"id":"12345678-1234-1234-1234-123456789ABC","name":"Test","workingDirectory":"","auxiliaryCommands":[],"wasRunning":false}]
+      [{"id":"12345678-1234-1234-1234-123456789ABC",\
+      "name":"Test","workingDirectory":"",\
+      "auxiliaryCommands":[],"wasRunning":false}]
       """
-    let data = json.data(using: .utf8)!
+    let data = Data(json.utf8)
     let result = try? JSONDecoder().decode([SavedProcess].self, from: data)
     #expect(result == nil)
   }
 
   @Test func emptyJSONArrayDecodesToEmpty() throws {
-    let data = "[]".data(using: .utf8)!
+    let data = Data("[]".utf8)
     let result = try JSONDecoder().decode([SavedProcess].self, from: data)
     #expect(result.isEmpty)
   }
@@ -193,7 +195,7 @@ struct PersistenceTests {
         command: "echo 'Hola Mundo'",
         workingDirectory: "",
         auxiliaryCommands: [
-          SavedProcess.SavedAuxCommand(id: UUID(), name: "Worker", command: "rake jobs:work")
+          SavedAuxCommand(id: UUID(), name: "Worker", command: "rake jobs:work")
         ],
         wasRunning: false
       )
@@ -222,7 +224,7 @@ struct PersistenceTests {
         command: "cmd \(i)",
         workingDirectory: "/path/\(i)",
         auxiliaryCommands: [
-          SavedProcess.SavedAuxCommand(id: UUID(), name: "Aux \(i)", command: "aux \(i)")
+          SavedAuxCommand(id: UUID(), name: "Aux \(i)", command: "aux \(i)")
         ],
         wasRunning: false
       )
