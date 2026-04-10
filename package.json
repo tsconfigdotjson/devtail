@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "og": "npx tsx scripts/render-og-image.ts"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

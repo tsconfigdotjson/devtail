@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 .agents/
 /web/.vite
+node_modules/
