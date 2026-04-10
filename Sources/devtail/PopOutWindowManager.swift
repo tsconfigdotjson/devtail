@@ -22,10 +22,14 @@ final class PopOutWindowManager {
 
     let window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
-      styleMask: [.titled, .closable, .resizable, .miniaturizable],
+      styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
+
+    window.titlebarAppearsTransparent = true
+    window.isOpaque = false
+    window.backgroundColor = .clear
 
     let hostingView = NSHostingView(rootView: PopOutProcessView(buffer: buffer))
     window.contentView = hostingView

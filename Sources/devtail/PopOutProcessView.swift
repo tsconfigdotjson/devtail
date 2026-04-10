@@ -15,6 +15,12 @@ struct PopOutProcessView: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
-    .background(Color(nsColor: .textBackgroundColor))
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background {
+      Rectangle()
+        .fill(.ultraThinMaterial)
+        .opacity(0.6)
+        .ignoresSafeArea()
+    }
   }
 }

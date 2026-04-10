@@ -54,9 +54,11 @@ function App() {
           }
         });
       },
-      { threshold: 0.1, rootMargin: "-40px 0px" }
+      { threshold: 0.1, rootMargin: "-40px 0px" },
     );
-    els.forEach((el) => observer.observe(el));
+    for (const el of els) {
+      observer.observe(el);
+    }
     return () => observer.disconnect();
   }, []);
 
@@ -91,7 +93,9 @@ function App() {
               <h1 className="hero-stagger text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1] tracking-[-0.04em]">
                 <span className="block">YOUR TERMINAL</span>
                 <span className="block">IS TAKEN.</span>
-                <span className="block text-accent">YOUR MENU BAR ISN&rsquo;T.</span>
+                <span className="block text-accent">
+                  YOUR MENU BAR ISN&rsquo;T.
+                </span>
               </h1>
 
               <p className="hero-stagger mt-6 md:mt-8 text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed">
