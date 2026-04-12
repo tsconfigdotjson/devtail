@@ -8,37 +8,37 @@ import Testing
 // divergence on fast-streaming processes.
 
 @MainActor
-struct TerminalRendererTests {
+fileprivate func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] {
+  [
+    .font: NSFont.monospacedSystemFont(ofSize: 11, weight: style.bold ? .bold : .regular),
+    .foregroundColor: NSColor.labelColor,
+  ]
+}
 
-  private static func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] {
-    [
-      .font: NSFont.monospacedSystemFont(ofSize: 11, weight: style.bold ? .bold : .regular),
-      .foregroundColor: NSColor.labelColor,
-    ]
-  }
+@MainActor
+fileprivate func driveIncremental(ops: [String], buffer: TerminalBuffer) -> String {
+  let storage = NSTextStorage()
+  var state = TerminalRenderState.empty
 
-  private func driveIncremental(ops: [String], buffer: TerminalBuffer) -> String {
-    let storage = NSTextStorage()
-    var state = TerminalRenderState.empty
-
-    for op in ops {
-      buffer.append(op)
-      let action = TerminalRenderer.nextAction(prev: state, buffer: buffer, fontChanged: false)
-      switch action {
-      case .fullRebuild:
-        let full = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
-        storage.setAttributedString(full)
-      case .appendOnly:
-        let delta = TerminalRenderer.renderAppend(
-          prev: state, buffer: buffer, attributes: Self.testAttrs)
-        storage.append(delta)
-      }
-      state = TerminalRenderer.newState(for: buffer)
+  for op in ops {
+    buffer.append(op)
+    let action = TerminalRenderer.nextAction(prev: state, buffer: buffer, fontChanged: false)
+    switch action {
+    case .fullRebuild:
+      let full = TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs)
+      storage.setAttributedString(full)
+    case .appendOnly:
+      let delta = TerminalRenderer.renderAppend(
+        prev: state, buffer: buffer, attributes: testAttrs)
+      storage.append(delta)
     }
-    return storage.string
+    state = TerminalRenderer.newState(for: buffer)
   }
+  return storage.string
+}
 
-  // MARK: - nextAction decision table
+@MainActor
+struct TerminalRendererTests {
 
   @Test func firstRenderAlwaysFullRebuild() {
     let buffer = TerminalBuffer()
@@ -97,8 +97,6 @@ struct TerminalRendererTests {
     #expect(action == .fullRebuild)
   }
 
-  // MARK: - newState
-
   @Test func newStateReflectsCurrentBuffer() {
     let buffer = TerminalBuffer()
     buffer.append("hello\nworld")
@@ -115,44 +113,40 @@ struct TerminalRendererTests {
     #expect(state.lastLineSpanCount == 0)
   }
 
-  // MARK: - renderFull content
-
   @Test func renderFullJoinsLinesWithNewlines() {
     let buffer = TerminalBuffer()
     buffer.append("a\nb\nc")
-    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
+    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs)
     #expect(result.string == "a\nb\nc")
   }
 
   @Test func renderFullOmitsTrailingNewline() {
     let buffer = TerminalBuffer()
     buffer.append("hello")
-    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
+    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs)
     #expect(result.string == "hello")
   }
 
   @Test func renderFullEmptyLinesAreEmpty() {
     let buffer = TerminalBuffer()
     buffer.append("\n\n\n")
-    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
+    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs)
     #expect(result.string == "\n\n\n")
   }
 
   @Test func renderFullWithANSIColors() {
     let buffer = TerminalBuffer()
     buffer.append("\u{1B}[31mred\u{1B}[0m plain")
-    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
+    let result = TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs)
     #expect(result.string == "red plain")
   }
-
-  // MARK: - renderAppend content
 
   @Test func renderAppendEmptyWhenNothingChanged() {
     let buffer = TerminalBuffer()
     buffer.append("hello")
     let state = TerminalRenderer.newState(for: buffer)
     let delta = TerminalRenderer.renderAppend(
-      prev: state, buffer: buffer, attributes: Self.testAttrs)
+      prev: state, buffer: buffer, attributes: testAttrs)
     #expect(delta.length == 0)
   }
 
@@ -162,7 +156,7 @@ struct TerminalRendererTests {
     let state = TerminalRenderer.newState(for: buffer)
     buffer.append("lo")
     let delta = TerminalRenderer.renderAppend(
-      prev: state, buffer: buffer, attributes: Self.testAttrs)
+      prev: state, buffer: buffer, attributes: testAttrs)
     #expect(delta.string == "lo")
   }
 
@@ -172,7 +166,7 @@ struct TerminalRendererTests {
     let state = TerminalRenderer.newState(for: buffer)
     buffer.append("\nworld")
     let delta = TerminalRenderer.renderAppend(
-      prev: state, buffer: buffer, attributes: Self.testAttrs)
+      prev: state, buffer: buffer, attributes: testAttrs)
     #expect(delta.string == "\nworld")
   }
 
@@ -182,7 +176,7 @@ struct TerminalRendererTests {
     let state = TerminalRenderer.newState(for: buffer)
     buffer.append("lo\nworld")
     let delta = TerminalRenderer.renderAppend(
-      prev: state, buffer: buffer, attributes: Self.testAttrs)
+      prev: state, buffer: buffer, attributes: testAttrs)
     #expect(delta.string == "lo\nworld")
   }
 
@@ -192,11 +186,13 @@ struct TerminalRendererTests {
     let state = TerminalRenderer.newState(for: buffer)
     buffer.append("\n")
     let delta = TerminalRenderer.renderAppend(
-      prev: state, buffer: buffer, attributes: Self.testAttrs)
+      prev: state, buffer: buffer, attributes: testAttrs)
     #expect(delta.string == "\n")
   }
+}
 
-  // MARK: - equivalence (the big one)
+@MainActor
+struct TerminalRendererEquivalenceTests {
 
   @Test func incrementalMatchesFullForCharacterStream() {
     let incrementalBuffer = TerminalBuffer()
@@ -205,7 +201,7 @@ struct TerminalRendererTests {
 
     let incremental = driveIncremental(ops: chunks, buffer: incrementalBuffer)
     for chunk in chunks { fullBuffer.append(chunk) }
-    let full = TerminalRenderer.renderFull(buffer: fullBuffer, attributes: Self.testAttrs).string
+    let full = TerminalRenderer.renderFull(buffer: fullBuffer, attributes: testAttrs).string
 
     #expect(incremental == full)
     #expect(incremental == "hello world")
@@ -218,7 +214,7 @@ struct TerminalRendererTests {
 
     let inc = driveIncremental(ops: ops, buffer: a)
     for op in ops { b.append(op) }
-    let full = TerminalRenderer.renderFull(buffer: b, attributes: Self.testAttrs).string
+    let full = TerminalRenderer.renderFull(buffer: b, attributes: testAttrs).string
 
     #expect(inc == full)
     #expect(inc == "line1\nline2\nline3")
@@ -239,7 +235,7 @@ struct TerminalRendererTests {
 
     let inc = driveIncremental(ops: ops, buffer: a)
     for op in ops { b.append(op) }
-    let full = TerminalRenderer.renderFull(buffer: b, attributes: Self.testAttrs).string
+    let full = TerminalRenderer.renderFull(buffer: b, attributes: testAttrs).string
 
     #expect(inc == full)
     #expect(inc == "red bold-blue\nplain")
@@ -254,7 +250,7 @@ struct TerminalRendererTests {
 
     let inc = driveIncremental(ops: ops, buffer: a)
     for op in ops { b.append(op) }
-    let full = TerminalRenderer.renderFull(buffer: b, attributes: Self.testAttrs).string
+    let full = TerminalRenderer.renderFull(buffer: b, attributes: testAttrs).string
 
     #expect(inc == full)
   }
@@ -270,10 +266,10 @@ struct TerminalRendererTests {
       switch action {
       case .fullRebuild:
         storage.setAttributedString(
-          TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs))
+          TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs))
       case .appendOnly:
         storage.append(
-          TerminalRenderer.renderAppend(prev: state, buffer: buffer, attributes: Self.testAttrs))
+          TerminalRenderer.renderAppend(prev: state, buffer: buffer, attributes: testAttrs))
       }
       state = TerminalRenderer.newState(for: buffer)
     }
@@ -282,7 +278,7 @@ struct TerminalRendererTests {
     buffer.append("fresh\nstart")
     let action = TerminalRenderer.nextAction(prev: state, buffer: buffer, fontChanged: false)
     #expect(action == .fullRebuild)
-    storage.setAttributedString(TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs))
+    storage.setAttributedString(TerminalRenderer.renderFull(buffer: buffer, attributes: testAttrs))
 
     #expect(storage.string == "fresh\nstart")
   }
@@ -294,7 +290,7 @@ struct TerminalRendererTests {
 
     let incText = driveIncremental(ops: ops, buffer: incremental)
     for op in ops { full.append(op) }
-    let fullText = TerminalRenderer.renderFull(buffer: full, attributes: Self.testAttrs).string
+    let fullText = TerminalRenderer.renderFull(buffer: full, attributes: testAttrs).string
 
     #expect(incText == fullText)
     #expect(incremental.lines.count <= 4)
@@ -322,7 +318,7 @@ struct TerminalRendererTests {
 
       let incText = driveIncremental(ops: ops, buffer: incremental)
       for op in ops { full.append(op) }
-      let fullText = TerminalRenderer.renderFull(buffer: full, attributes: Self.testAttrs).string
+      let fullText = TerminalRenderer.renderFull(buffer: full, attributes: testAttrs).string
 
       #expect(
         incText == fullText,

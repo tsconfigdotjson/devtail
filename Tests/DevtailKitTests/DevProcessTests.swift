@@ -54,8 +54,6 @@ struct DevProcessTests {
     return (process, f)
   }
 
-  // MARK: - start / stop basics
-
   @Test func startSetsIsRunningAndInvokesRunner() {
     let (p, f) = makeProcess()
     p.start()
@@ -106,8 +104,6 @@ struct DevProcessTests {
     #expect(p.isRunning == false)
   }
 
-  // MARK: - exit distinction: natural vs user-initiated
-
   @Test func naturalExitFiresOnNaturalExit() {
     let (p, f) = makeProcess()
     var exitStatus: Int32?
@@ -152,8 +148,25 @@ struct DevProcessTests {
     let plain = p.buffer.lines.map { $0.spans.map(\.text).joined() }.joined(separator: "\n")
     #expect(plain.contains("Process stopped"))
   }
+}
 
-  // MARK: - auxiliary commands
+@MainActor
+struct DevProcessAuxiliaryTests {
+
+  private func makeProcess(
+    aux: [AuxiliaryCommand] = [],
+    factory: FakeRunnerFactory? = nil
+  ) -> (DevProcess, FakeRunnerFactory) {
+    let f = factory ?? FakeRunnerFactory()
+    let process = DevProcess(
+      name: "test",
+      command: "sleep 5",
+      workingDirectory: "/tmp",
+      auxiliaryCommands: aux,
+      makeRunner: { f.make() }
+    )
+    return (process, f)
+  }
 
   @Test func startSpawnsRunnerPerAuxiliary() {
     let aux = [
@@ -206,8 +219,6 @@ struct DevProcessTests {
     #expect(!fresh.hasContent)
   }
 
-  // MARK: - forceStop (quit path)
-
   @Test func forceStopUsesSyncOnMainAndAux() {
     let aux = [AuxiliaryCommand(name: "logs", command: "tail -f log")]
     let (p, f) = makeProcess(aux: aux)
@@ -224,8 +235,6 @@ struct DevProcessTests {
     #expect(f.runners.count == 0)
     #expect(p.isRunning == false)
   }
-
-  // MARK: - onStateChange
 
   @Test func onStateChangeFiresOnStartAndStop() {
     let (p, _) = makeProcess()
@@ -246,8 +255,6 @@ struct DevProcessTests {
     f.runners[0].fireExit(0)
     #expect(count == 1)
   }
-
-  // MARK: - buffer clear on restart
 
   @Test func restartingClearsMainBuffer() {
     let (p, f) = makeProcess()

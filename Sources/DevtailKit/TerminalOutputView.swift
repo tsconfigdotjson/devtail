@@ -205,8 +205,14 @@ public struct TerminalPreviewText: View {
   }
 }
 
+fileprivate struct RGB {
+  let r: Double
+  let g: Double
+  let b: Double
+}
+
 extension ANSIColor {
-  fileprivate var rgbComponents: (r: Double, g: Double, b: Double)? {
+  fileprivate var rgbComponents: RGB? {
     switch self {
     case .default:
       return nil
@@ -217,7 +223,7 @@ extension ANSIColor {
     case .palette(let n):
       return Self.paletteRGB(n)
     case .rgb(let r, let g, let b):
-      return (Double(r) / 255, Double(g) / 255, Double(b) / 255)
+      return RGB(r: Double(r) / 255, g: Double(g) / 255, b: Double(b) / 255)
     }
   }
 
@@ -231,35 +237,35 @@ extension ANSIColor {
     return NSColor(red: rgb.r, green: rgb.g, blue: rgb.b, alpha: 1)
   }
 
-  private static func standardRGB(_ index: UInt8) -> (Double, Double, Double) {
+  private static func standardRGB(_ index: UInt8) -> RGB {
     switch index {
-    case 0: (0.2, 0.2, 0.2)
-    case 1: (0.85, 0.25, 0.25)
-    case 2: (0.25, 0.75, 0.35)
-    case 3: (0.85, 0.75, 0.25)
-    case 4: (0.35, 0.45, 0.9)
-    case 5: (0.8, 0.35, 0.8)
-    case 6: (0.3, 0.8, 0.85)
-    case 7: (0.8, 0.8, 0.8)
-    default: (1, 1, 1)
+    case 0: RGB(r: 0.2, g: 0.2, b: 0.2)
+    case 1: RGB(r: 0.85, g: 0.25, b: 0.25)
+    case 2: RGB(r: 0.25, g: 0.75, b: 0.35)
+    case 3: RGB(r: 0.85, g: 0.75, b: 0.25)
+    case 4: RGB(r: 0.35, g: 0.45, b: 0.9)
+    case 5: RGB(r: 0.8, g: 0.35, b: 0.8)
+    case 6: RGB(r: 0.3, g: 0.8, b: 0.85)
+    case 7: RGB(r: 0.8, g: 0.8, b: 0.8)
+    default: RGB(r: 1, g: 1, b: 1)
     }
   }
 
-  private static func brightRGB(_ index: UInt8) -> (Double, Double, Double) {
+  private static func brightRGB(_ index: UInt8) -> RGB {
     switch index {
-    case 0: (0.5, 0.5, 0.5)
-    case 1: (1.0, 0.35, 0.35)
-    case 2: (0.35, 0.95, 0.45)
-    case 3: (1.0, 0.95, 0.35)
-    case 4: (0.45, 0.55, 1.0)
-    case 5: (0.95, 0.45, 0.95)
-    case 6: (0.4, 0.95, 1.0)
-    case 7: (1.0, 1.0, 1.0)
-    default: (1, 1, 1)
+    case 0: RGB(r: 0.5, g: 0.5, b: 0.5)
+    case 1: RGB(r: 1.0, g: 0.35, b: 0.35)
+    case 2: RGB(r: 0.35, g: 0.95, b: 0.45)
+    case 3: RGB(r: 1.0, g: 0.95, b: 0.35)
+    case 4: RGB(r: 0.45, g: 0.55, b: 1.0)
+    case 5: RGB(r: 0.95, g: 0.45, b: 0.95)
+    case 6: RGB(r: 0.4, g: 0.95, b: 1.0)
+    case 7: RGB(r: 1.0, g: 1.0, b: 1.0)
+    default: RGB(r: 1, g: 1, b: 1)
     }
   }
 
-  private static func paletteRGB(_ index: UInt8) -> (Double, Double, Double) {
+  private static func paletteRGB(_ index: UInt8) -> RGB {
     let n = Int(index)
     if n < 8 {
       return standardRGB(index)
@@ -270,14 +276,14 @@ extension ANSIColor {
       let r = adjusted / 36
       let g = (adjusted % 36) / 6
       let b = adjusted % 6
-      return (
-        r == 0 ? 0 : Double(r * 40 + 55) / 255,
-        g == 0 ? 0 : Double(g * 40 + 55) / 255,
-        b == 0 ? 0 : Double(b * 40 + 55) / 255
+      return RGB(
+        r: r == 0 ? 0 : Double(r * 40 + 55) / 255,
+        g: g == 0 ? 0 : Double(g * 40 + 55) / 255,
+        b: b == 0 ? 0 : Double(b * 40 + 55) / 255
       )
     } else {
       let gray = Double((n - 232) * 10 + 8) / 255
-      return (gray, gray, gray)
+      return RGB(r: gray, g: gray, b: gray)
     }
   }
 }

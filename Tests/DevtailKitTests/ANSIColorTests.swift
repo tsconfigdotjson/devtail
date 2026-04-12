@@ -7,7 +7,6 @@ import Testing
 @MainActor
 struct ANSIColorTests {
 
-  // MARK: - default
 
   @Test func defaultSwiftUIColorIsPrimary() {
     // SwiftUI Color has no stable equality across macOS; description is the
@@ -20,7 +19,6 @@ struct ANSIColorTests {
     #expect(ANSIColor.default.nsColor == NSColor.labelColor)
   }
 
-  // MARK: - standard (30-37)
 
   @Test func standardRedMatchesExpectedRGB() {
     let color = ANSIColor.standard(1).nsColor
@@ -57,7 +55,6 @@ struct ANSIColorTests {
     #expect(seen.count == 8)
   }
 
-  // MARK: - bright (90-97)
 
   @Test func brightIsLighterThanStandard() {
     // Skip 0 (black/gray) and 7 (white) — luminance ordering flips for those.
@@ -70,7 +67,6 @@ struct ANSIColorTests {
     }
   }
 
-  // MARK: - palette (256-color)
 
   @Test func palette0To7MatchesStandard() {
     for i in UInt8(0)...UInt8(7) {
@@ -119,7 +115,6 @@ struct ANSIColorTests {
     }
   }
 
-  // MARK: - rgb direct
 
   @Test func rgbPassesThroughScaledTo01() {
     let c = ANSIColor.rgb(255, 128, 0).nsColor.cgColor.components!
@@ -135,7 +130,6 @@ struct ANSIColorTests {
     #expect(c[2] == 0)
   }
 
-  // MARK: - swiftUIColor / nsColor consistency
 
   @Test func swiftUIAndNSColorShareRGBViaBridge() {
     let sample = ANSIColor.rgb(100, 150, 200)

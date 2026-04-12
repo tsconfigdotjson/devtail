@@ -294,8 +294,10 @@ struct TerminalBufferTests {
     #expect(buffer.lines.count == 1)
     #expect(buffer.lines[0].plainText == "c")
   }
+}
 
-  // MARK: - Byte-cap retention
+@MainActor
+struct TerminalBufferByteCapTests {
 
   @Test func byteCapTrimsWhenPayloadExceedsLimit() {
     let buffer = TerminalBuffer(maxLines: 10_000, maxBytes: 256)
