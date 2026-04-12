@@ -12,7 +12,7 @@ public final class ProcessRunner {
 
   // Env vars passed to subprocesses. Minimum set that still lets typical dev
   // tools (node, python, go) resolve binaries and respect locale/shell config.
-  nonisolated private static let inheritedEnvKeys: [String] = [
+  nonisolated internal static let inheritedEnvKeys: [String] = [
     "PATH", "SHELL", "PWD", "TMPDIR",
     "LANG", "LC_ALL",
     "NODE_ENV",
@@ -150,7 +150,7 @@ public final class ProcessRunner {
     readTask = nil
   }
 
-  private static func makeEnvironment() -> [String: String] {
+  nonisolated internal static func makeEnvironment() -> [String: String] {
     let parent = ProcessInfo.processInfo.environment
     var env: [String: String] = [
       "HOME": NSHomeDirectory(),

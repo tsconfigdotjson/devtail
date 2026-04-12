@@ -67,12 +67,7 @@ private struct TerminalNSView: NSViewRepresentable {
     private var boldFont: NSFont?
     private var colorCache: [ANSIColor: NSColor] = [:]
     private var isFirstUpdate = true
-
-    // Incremental render state. We append to textStorage instead of rebuilding
-    // on every version change, which is O(new spans) instead of O(all spans).
-    private var renderedFirstLineID: Int = -1
-    private var renderedLineCount: Int = 0
-    private var renderedLastLineSpanCount: Int = 0
+    private var renderState = TerminalRenderState.empty
 
     func update(buffer: TerminalBuffer, fontSize: CGFloat) {
       guard let textView else { return }
@@ -86,22 +81,19 @@ private struct TerminalNSView: NSViewRepresentable {
       let fontChanged = fontSize != cachedFontSize
       ensureFontCache(fontSize: fontSize)
 
-      let currentFirstID = buffer.lines.first?.id ?? -1
-      let trimmedOrCleared =
-        renderedFirstLineID != currentFirstID
-        || buffer.lines.count < renderedLineCount
-
+      let action = TerminalRenderer.nextAction(prev: renderState, buffer: buffer, fontChanged: fontChanged)
       storage.beginEditing()
-      if fontChanged || trimmedOrCleared || renderedLineCount == 0 {
-        storage.setAttributedString(buildFullAttributedString(buffer: buffer))
-      } else {
-        appendIncremental(buffer: buffer, storage: storage)
+      switch action {
+      case .fullRebuild:
+        storage.setAttributedString(TerminalRenderer.renderFull(buffer: buffer, attributes: attributes(for:)))
+      case .appendOnly:
+        let delta = TerminalRenderer.renderAppend(
+          prev: renderState, buffer: buffer, attributes: attributes(for:))
+        if delta.length > 0 { storage.append(delta) }
       }
       storage.endEditing()
 
-      renderedFirstLineID = currentFirstID
-      renderedLineCount = buffer.lines.count
-      renderedLastLineSpanCount = buffer.lines.last?.spans.count ?? 0
+      renderState = TerminalRenderer.newState(for: buffer)
 
       if isAtBottom {
         if isFirstUpdate {
@@ -132,12 +124,11 @@ private struct TerminalNSView: NSViewRepresentable {
       return resolved
     }
 
-    private var defaultAttrs: [NSAttributedString.Key: Any] {
-      [.font: regularFont!, .foregroundColor: NSColor.labelColor]
-    }
-
     private func attributes(for style: ANSIStyle) -> [NSAttributedString.Key: Any] {
-      var attrs = defaultAttrs
+      var attrs: [NSAttributedString.Key: Any] = [
+        .font: regularFont!,
+        .foregroundColor: NSColor.labelColor,
+      ]
       if style.foreground != .default {
         attrs[.foregroundColor] = resolveColor(style.foreground)
       }
@@ -154,47 +145,6 @@ private struct TerminalNSView: NSViewRepresentable {
         attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
       }
       return attrs
-    }
-
-    private func buildFullAttributedString(buffer: TerminalBuffer) -> NSAttributedString {
-      let result = NSMutableAttributedString()
-      for (i, line) in buffer.lines.enumerated() {
-        for span in line.spans {
-          result.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
-        }
-        if i < buffer.lines.count - 1 {
-          result.append(NSAttributedString(string: "\n", attributes: defaultAttrs))
-        }
-      }
-      return result
-    }
-
-    private func appendIncremental(buffer: TerminalBuffer, storage: NSTextStorage) {
-      let oldCount = renderedLineCount
-      guard oldCount > 0 else { return }
-
-      let oldLastIndex = oldCount - 1
-      let append = NSMutableAttributedString()
-
-      // Extend the previously-last line with any new spans.
-      let oldLastLine = buffer.lines[oldLastIndex]
-      if oldLastLine.spans.count > renderedLastLineSpanCount {
-        for span in oldLastLine.spans[renderedLastLineSpanCount...] {
-          append.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
-        }
-      }
-
-      // Append any new lines after the old last line.
-      for i in oldCount..<buffer.lines.count {
-        append.append(NSAttributedString(string: "\n", attributes: defaultAttrs))
-        for span in buffer.lines[i].spans {
-          append.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
-        }
-      }
-
-      if append.length > 0 {
-        storage.append(append)
-      }
     }
   }
 }
