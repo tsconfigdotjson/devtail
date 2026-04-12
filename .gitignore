@@ -9,3 +9,4 @@ DerivedData/
 .agents/
 /web/.vite
 node_modules/
+.claude/
