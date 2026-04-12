@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private var statusItem: NSStatusItem!
   private var popover: NSPopover!
   private var signalSource: DispatchSourceSignal?
+  private var idleIcon: NSImage?
+  private var runningIcon: NSImage?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     store = ProcessStore()
@@ -58,22 +60,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func updateMenuBarIcon() {
     let anyRunning = store.processes.contains { $0.isRunning }
+    statusItem.button?.image = anyRunning ? cachedRunningIcon() : cachedIdleIcon()
+  }
+
+  private func cachedIdleIcon() -> NSImage? {
+    if idleIcon == nil { idleIcon = makeIcon(running: false) }
+    return idleIcon
+  }
+
+  private func cachedRunningIcon() -> NSImage? {
+    if runningIcon == nil { runningIcon = makeIcon(running: true) }
+    return runningIcon
+  }
+
+  private func makeIcon(running: Bool) -> NSImage? {
     guard
       let baseImage = NSImage(
         systemSymbolName: "terminal",
         accessibilityDescription: "devtail"
       )
-    else { return }
+    else { return nil }
 
     let dotSize: CGFloat = 4.5
     let dotGap: CGFloat = 1.5
-    let totalWidth = anyRunning ? baseImage.size.width + dotGap + dotSize : baseImage.size.width
+    let totalWidth = running ? baseImage.size.width + dotGap + dotSize : baseImage.size.width
     let composited = NSImage(
       size: NSSize(width: totalWidth, height: baseImage.size.height),
       flipped: false
     ) { _ in
       baseImage.draw(in: NSRect(origin: .zero, size: baseImage.size))
-      if anyRunning {
+      if running {
         let dotY = (baseImage.size.height - dotSize) / 2
         let dotRect = NSRect(x: baseImage.size.width + dotGap, y: dotY, width: dotSize, height: dotSize)
         NSColor.black.setFill()
@@ -82,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       return true
     }
     composited.isTemplate = true
-    statusItem.button?.image = composited
+    return composited
   }
 
   private func performCleanup() {

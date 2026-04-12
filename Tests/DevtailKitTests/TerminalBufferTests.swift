@@ -2,6 +2,12 @@ import Testing
 
 @testable import DevtailKit
 
+extension TerminalLine {
+  fileprivate var plainText: String {
+    spans.map(\.text).joined()
+  }
+}
+
 @MainActor
 struct TerminalBufferTests {
 
@@ -287,5 +293,48 @@ struct TerminalBufferTests {
     buffer.append("a\nb\nc")
     #expect(buffer.lines.count == 1)
     #expect(buffer.lines[0].plainText == "c")
+  }
+}
+
+@MainActor
+struct TerminalBufferByteCapTests {
+
+  @Test func byteCapTrimsWhenPayloadExceedsLimit() {
+    let buffer = TerminalBuffer(maxLines: 10_000, maxBytes: 256)
+    let longLine = String(repeating: "x", count: 200)
+    buffer.append("\(longLine)\n")
+    buffer.append("\(longLine)\n")
+    buffer.append("\(longLine)")
+    #expect(buffer.lines.count < 3)
+  }
+
+  @Test func byteCapKeepsAtLeastOneLine() {
+    let buffer = TerminalBuffer(maxLines: 100, maxBytes: 10)
+    let hugeLine = String(repeating: "x", count: 10_000)
+    buffer.append(hugeLine)
+    #expect(buffer.lines.count == 1)
+  }
+
+  @Test func clearResetsByteCounter() {
+    let buffer = TerminalBuffer(maxLines: 100, maxBytes: 256)
+    buffer.append(String(repeating: "x", count: 500))
+    buffer.clear()
+    let smallLine = String(repeating: "y", count: 50)
+    buffer.append("\(smallLine)\n\(smallLine)\n\(smallLine)")
+    #expect(buffer.hasContent)
+  }
+
+  @Test func carriageReturnReducesByteCount() {
+    let buffer = TerminalBuffer(maxLines: 10, maxBytes: 200)
+    buffer.append(String(repeating: "x", count: 150))
+    buffer.append("\rshort")
+    #expect(buffer.lines.count == 1)
+    #expect(buffer.lines[0].plainText == "short")
+  }
+
+  @Test func byteCapIgnoredWhenBudgetIsHuge() {
+    let buffer = TerminalBuffer(maxLines: 5, maxBytes: 100_000_000)
+    buffer.append("a\nb\nc\nd\ne\nf\ng")
+    #expect(buffer.lines.count == 5)
   }
 }

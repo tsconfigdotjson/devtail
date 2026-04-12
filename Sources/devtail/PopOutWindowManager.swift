@@ -75,14 +75,15 @@ final class PopOutWindowManager {
   }
 }
 
-private final class WindowCloseDelegate: NSObject, NSWindowDelegate, @unchecked Sendable {
-  let onClose: @MainActor () -> Void
+@MainActor
+private final class WindowCloseDelegate: NSObject, NSWindowDelegate {
+  let onClose: () -> Void
 
-  init(onClose: @escaping @MainActor () -> Void) {
+  init(onClose: @escaping () -> Void) {
     self.onClose = onClose
   }
 
-  func windowWillClose(_ notification: Notification) {
+  nonisolated func windowWillClose(_ notification: Notification) {
     MainActor.assumeIsolated {
       onClose()
     }

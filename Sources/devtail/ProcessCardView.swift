@@ -36,7 +36,7 @@ struct ProcessCardView: View {
           StatusDot(isRunning: process.isRunning)
         }
 
-        if process.buffer.hasContent {
+        if process.isRunning, process.buffer.hasContent {
           TerminalBlock {
             TerminalPreviewText(
               buffer: process.buffer,
@@ -49,33 +49,35 @@ struct ProcessCardView: View {
           }
         }
 
-        ForEach(process.auxiliaryCommands) { aux in
-          let auxBuf = process.bufferFor(auxiliary: aux.id)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(aux.name.uppercased())
-              .font(.system(size: 9, weight: .semibold, design: .rounded))
-              .foregroundStyle(.tertiary)
-              .tracking(0.5)
+        if process.isRunning {
+          ForEach(process.auxiliaryCommands) { aux in
+            let auxBuf = process.bufferFor(auxiliary: aux.id)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(aux.name.uppercased())
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(.tertiary)
+                .tracking(0.5)
 
-            TerminalBlock {
-              if auxBuf.hasContent {
-                TerminalPreviewText(
-                  buffer: auxBuf,
-                  lineLimit: 2,
-                  fontSize: 10
-                )
-              } else {
-                Text(aux.command)
-                  .font(.system(size: 10, design: .monospaced))
-                  .foregroundStyle(.tertiary)
-                  .frame(maxWidth: .infinity, alignment: .leading)
+              TerminalBlock {
+                if auxBuf.hasContent {
+                  TerminalPreviewText(
+                    buffer: auxBuf,
+                    lineLimit: 2,
+                    fontSize: 10
+                  )
+                } else {
+                  Text(aux.command)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
               }
-            }
-            .overlay(alignment: .topTrailing) {
-              popOutButton(
-                buffer: auxBuf,
-                title: "\(process.name) — \(aux.name)"
-              )
+              .overlay(alignment: .topTrailing) {
+                popOutButton(
+                  buffer: auxBuf,
+                  title: "\(process.name) — \(aux.name)"
+                )
+              }
             }
           }
         }
