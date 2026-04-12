@@ -27,8 +27,7 @@ public final class TerminalBuffer {
   private let maxBytes: Int
   private var approxByteCount: Int = 0
 
-  // A styled span's overhead (per-span allocation, style struct) is not free;
-  // approximate each span as text bytes + 32 to bound memory on styled streams.
+  // Approximate per-span allocation overhead so styled streams count toward maxBytes.
   private static let spanOverheadBytes = 32
 
   public init(maxLines: Int = 2000, maxBytes: Int = 2_000_000) {

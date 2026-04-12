@@ -10,8 +10,7 @@ public final class ProcessRunner {
   nonisolated private static let readFlushInterval: Duration = .milliseconds(50)
   nonisolated private static let sigKillDelay: Duration = .milliseconds(800)
 
-  // Env vars passed to subprocesses. Minimum set that still lets typical dev
-  // tools (node, python, go) resolve binaries and respect locale/shell config.
+  // Without PATH, subprocesses can't resolve node/python/go binaries.
   nonisolated internal static let inheritedEnvKeys: [String] = [
     "PATH", "SHELL", "PWD", "TMPDIR",
     "LANG", "LC_ALL",
@@ -117,8 +116,6 @@ public final class ProcessRunner {
     readTask = nil
   }
 
-  // Synchronous stop for the quit path. Waits up to `timeout` for graceful
-  // exit via DispatchSource.exit (returns early on exit), then SIGKILLs.
   public func stopSync(timeout: TimeInterval = 0.3) {
     let pid = launchedPID
     guard pid != 0 else { return }
@@ -134,7 +131,7 @@ public final class ProcessRunner {
     source.setEventHandler { sem.signal() }
     source.resume()
 
-    // Guard against the process exiting between SIGTERM and subscribe.
+    // Racy: process may have exited before source activated.
     if kill(pid, 0) != 0 {
       sem.signal()
     }

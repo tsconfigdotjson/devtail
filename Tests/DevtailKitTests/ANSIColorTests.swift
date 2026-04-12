@@ -4,18 +4,14 @@ import Testing
 
 @testable import DevtailKit
 
-// The palette was deduped into a single rgbComponents tuple with thin
-// swiftUIColor / nsColor wrappers. These tests lock down the numeric output so
-// the refactor can't silently shift colors.
-
 @MainActor
 struct ANSIColorTests {
 
   // MARK: - default
 
   @Test func defaultSwiftUIColorIsPrimary() {
-    // Can't compare SwiftUI Color directly to .primary across macOS versions
-    // reliably — descriptionString is the closest check.
+    // SwiftUI Color has no stable equality across macOS; description is the
+    // best we can do without round-tripping through NSColor.
     let color = ANSIColor.default.swiftUIColor
     #expect(String(describing: color).contains("primary"))
   }
@@ -64,7 +60,8 @@ struct ANSIColorTests {
   // MARK: - bright (90-97)
 
   @Test func brightIsLighterThanStandard() {
-    for i in UInt8(1)...UInt8(6) {  // skip 0 (black/gray) and 7 (white)
+    // Skip 0 (black/gray) and 7 (white) — luminance ordering flips for those.
+    for i in UInt8(1)...UInt8(6) {
       let std = ANSIColor.standard(i).nsColor.cgColor.components!
       let bright = ANSIColor.bright(i).nsColor.cgColor.components!
       let stdLuma = std[0] + std[1] + std[2]
@@ -96,8 +93,7 @@ struct ANSIColorTests {
   }
 
   @Test func palette16Is6x6x6CubeOrigin() {
-    // Index 16 = (0,0,0) in the 6x6x6 cube, which should be pure black
-    // per the r==0/g==0/b==0 branches in paletteRGB.
+    // Index 16 is (0,0,0) in the 6x6x6 color cube — the zero branch.
     let color = ANSIColor.palette(16).nsColor.cgColor.components!
     #expect(color[0] == 0)
     #expect(color[1] == 0)
@@ -105,7 +101,7 @@ struct ANSIColorTests {
   }
 
   @Test func palette231IsCubeMaxWhite() {
-    // Index 231 = (5,5,5) = 5*40+55 = 255 in each channel, scaled to 1.0.
+    // Index 231 is (5,5,5) in the cube: 5*40+55 = 255, scaled to 1.0.
     let color = ANSIColor.palette(231).nsColor.cgColor.components!
     #expect(abs(color[0] - 1.0) < 0.01)
     #expect(abs(color[1] - 1.0) < 0.01)
@@ -116,7 +112,6 @@ struct ANSIColorTests {
     var prev: CGFloat = -1
     for i in UInt8(232)...UInt8(255) {
       let c = ANSIColor.palette(i).nsColor.cgColor.components!
-      // Gray ramp: R == G == B.
       #expect(c[0] == c[1])
       #expect(c[1] == c[2])
       #expect(c[0] > prev)
@@ -143,9 +138,6 @@ struct ANSIColorTests {
   // MARK: - swiftUIColor / nsColor consistency
 
   @Test func swiftUIAndNSColorShareRGBViaBridge() {
-    // Both wrappers go through the shared rgbComponents — we verify agreement
-    // by resolving the SwiftUI Color back to a native CGColor on the current
-    // display and comparing components.
     let sample = ANSIColor.rgb(100, 150, 200)
     let ns = sample.nsColor
     let bridged = NSColor(sample.swiftUIColor)

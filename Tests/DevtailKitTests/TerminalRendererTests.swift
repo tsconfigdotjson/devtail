@@ -3,17 +3,13 @@ import Testing
 
 @testable import DevtailKit
 
-// These tests pin down the incremental render contract: whatever sequence of
-// buffer operations we run through the append path must produce the same
-// NSAttributedString string content as a single full rebuild against the final
-// buffer state. If that invariant ever breaks, output on fast-streaming
-// processes would silently corrupt — hence the property-style sweep below.
+// Contract: any sequence of append-path updates must produce the same string
+// content as a single full rebuild. Property sweep below guards against silent
+// divergence on fast-streaming processes.
 
 @MainActor
 struct TerminalRendererTests {
 
-  // Minimal attribute provider — we only care about characters here, not
-  // attribute equality, so a constant dict is fine.
   private static func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] {
     [
       .font: NSFont.monospacedSystemFont(ofSize: 11, weight: style.bold ? .bold : .regular),
@@ -21,9 +17,6 @@ struct TerminalRendererTests {
     ]
   }
 
-  // Drive the incremental render path through every intermediate state and
-  // return the running NSTextStorage content. Mirrors what Coordinator.update
-  // does but without a live NSTextView.
   private func driveIncremental(ops: [String], buffer: TerminalBuffer) -> String {
     let storage = NSTextStorage()
     var state = TerminalRenderState.empty
@@ -89,16 +82,13 @@ struct TerminalRendererTests {
     let buffer = TerminalBuffer(maxLines: 3)
     buffer.append("a\nb\nc")
     let state = TerminalRenderer.newState(for: buffer)
-    buffer.append("\nd\ne")  // trims "a", "b"
+    buffer.append("\nd\ne")
     let action = TerminalRenderer.nextAction(
       prev: state, buffer: buffer, fontChanged: false)
-    // First line ID has changed due to trim — must rebuild.
     #expect(action == .fullRebuild)
   }
 
   @Test func lineCountShrinkWithoutIDChangeStillRebuilds() {
-    // Synthetic case: if lineCount shrinks but firstLineID is the same,
-    // rebuild anyway (defensive).
     let buffer = TerminalBuffer()
     buffer.append("a\nb\nc")
     let firstID = buffer.lines.first!.id
@@ -121,7 +111,7 @@ struct TerminalRendererTests {
   @Test func newStateOnEmptyBufferIsSafe() {
     let buffer = TerminalBuffer()
     let state = TerminalRenderer.newState(for: buffer)
-    #expect(state.lineCount == 1)  // init adds one empty line
+    #expect(state.lineCount == 1)
     #expect(state.lastLineSpanCount == 0)
   }
 
@@ -144,7 +134,6 @@ struct TerminalRendererTests {
   @Test func renderFullEmptyLinesAreEmpty() {
     let buffer = TerminalBuffer()
     buffer.append("\n\n\n")
-    // Four lines total (three newlines), all empty.
     let result = TerminalRenderer.renderFull(buffer: buffer, attributes: Self.testAttrs)
     #expect(result.string == "\n\n\n")
   }
@@ -201,7 +190,7 @@ struct TerminalRendererTests {
     let buffer = TerminalBuffer()
     buffer.append("hello")
     let state = TerminalRenderer.newState(for: buffer)
-    buffer.append("\n")  // adds one new (empty) line
+    buffer.append("\n")
     let delta = TerminalRenderer.renderAppend(
       prev: state, buffer: buffer, attributes: Self.testAttrs)
     #expect(delta.string == "\n")
@@ -257,12 +246,8 @@ struct TerminalRendererTests {
   }
 
   @Test func incrementalHandlesCarriageReturnViaRebuild() {
-    // Carriage return clears the current line's spans — lastLineSpanCount in
-    // the prev state will be higher than buffer.lines.last.spans.count. That's
-    // fine because currently the decision is only "rebuild on firstLineID
-    // change / lineCount shrink". The append path assumes spans only grow on
-    // the current last line. This test pins down behavior: does it still
-    // produce the right character sequence?
+    // CR clears the current line's spans, which violates the "spans only grow"
+    // assumption of the append path. Pin that the final characters match.
     let a = TerminalBuffer()
     let b = TerminalBuffer()
     let ops = ["progress 10%\r", "progress 50%\r", "progress 100%\ndone"]
@@ -279,7 +264,6 @@ struct TerminalRendererTests {
     let storage = NSTextStorage()
     var state = TerminalRenderState.empty
 
-    // First half
     for op in ["hello", " world", "\nmore"] {
       buffer.append(op)
       let action = TerminalRenderer.nextAction(prev: state, buffer: buffer, fontChanged: false)
@@ -295,7 +279,6 @@ struct TerminalRendererTests {
     }
 
     buffer.clear()
-    // After clear, firstLineID changes, so next action is fullRebuild.
     buffer.append("fresh\nstart")
     let action = TerminalRenderer.nextAction(prev: state, buffer: buffer, fontChanged: false)
     #expect(action == .fullRebuild)
@@ -314,13 +297,10 @@ struct TerminalRendererTests {
     let fullText = TerminalRenderer.renderFull(buffer: full, attributes: Self.testAttrs).string
 
     #expect(incText == fullText)
-    // Only last 4 lines (or fewer) should remain.
     #expect(incremental.lines.count <= 4)
   }
 
   @Test func randomOpSequencesStayEquivalent() {
-    // Deterministic "random" via seeded generator. We only need the invariant
-    // to hold across a wide sweep of inputs; exact coverage isn't the point.
     var rng = SystemRandomNumberGenerator()
     let candidates: [String] = [
       "a", "b", "c", " ", "x", "y",

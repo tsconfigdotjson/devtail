@@ -206,8 +206,6 @@ public struct TerminalPreviewText: View {
 }
 
 extension ANSIColor {
-  // Shared palette math. Returns 0-1 RGB components; SwiftUI + AppKit wrappers
-  // consume this to avoid ~80 lines of duplicated switch statements.
   fileprivate var rgbComponents: (r: Double, g: Double, b: Double)? {
     switch self {
     case .default:

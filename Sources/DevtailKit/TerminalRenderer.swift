@@ -1,18 +1,5 @@
 import AppKit
 
-// Pure, testable logic for incremental terminal rendering.
-//
-// The view layer (TerminalOutputView.Coordinator) owns an NSTextStorage and a
-// small amount of cached state (font, color lookup). Every time the buffer's
-// version bumps, it has to decide:
-//   - rebuild the entire NSAttributedString, or
-//   - append only the bytes that are new since last render?
-//
-// Moving that decision + the NSAttributedString construction here keeps the
-// Coordinator thin and lets us unit-test the state machine directly — which
-// matters because an off-by-one in the append path would silently corrupt
-// output on fast-streaming processes.
-
 public struct TerminalRenderState: Sendable, Equatable {
   public var firstLineID: Int
   public var lineCount: Int
@@ -89,7 +76,6 @@ public enum TerminalRenderer {
     let result = NSMutableAttributedString()
     let oldLastIndex = prev.lineCount - 1
 
-    // Extend the previously-last line with any newly added spans.
     let oldLastLine = buffer.lines[oldLastIndex]
     if oldLastLine.spans.count > prev.lastLineSpanCount {
       for span in oldLastLine.spans[prev.lastLineSpanCount...] {
@@ -97,7 +83,6 @@ public enum TerminalRenderer {
       }
     }
 
-    // Append any new lines that appeared after the old last line.
     for i in prev.lineCount..<buffer.lines.count {
       result.append(NSAttributedString(string: "\n", attributes: defaults))
       for span in buffer.lines[i].spans {

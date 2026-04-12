@@ -298,13 +298,11 @@ struct TerminalBufferTests {
   // MARK: - Byte-cap retention
 
   @Test func byteCapTrimsWhenPayloadExceedsLimit() {
-    // Small byte budget, generous line budget — byte cap should kick in first.
     let buffer = TerminalBuffer(maxLines: 10_000, maxBytes: 256)
     let longLine = String(repeating: "x", count: 200)
     buffer.append("\(longLine)\n")
     buffer.append("\(longLine)\n")
     buffer.append("\(longLine)")
-    // Three ~200-byte lines exceed 256; oldest should be trimmed.
     #expect(buffer.lines.count < 3)
   }
 
@@ -312,31 +310,22 @@ struct TerminalBufferTests {
     let buffer = TerminalBuffer(maxLines: 100, maxBytes: 10)
     let hugeLine = String(repeating: "x", count: 10_000)
     buffer.append(hugeLine)
-    // Even when a single line blows the byte budget, we can't trim below 1.
     #expect(buffer.lines.count == 1)
   }
 
   @Test func clearResetsByteCounter() {
-    // After clear the buffer should behave like a fresh one — no phantom
-    // byte accounting carrying forward.
     let buffer = TerminalBuffer(maxLines: 100, maxBytes: 256)
     buffer.append(String(repeating: "x", count: 500))
     buffer.clear()
-    // Now fill exactly up to the limit; should not trim.
     let smallLine = String(repeating: "y", count: 50)
     buffer.append("\(smallLine)\n\(smallLine)\n\(smallLine)")
-    // byte budget with overhead may still trim some lines — the invariant
-    // we pin is only that clear() didn't leave a dangling count.
     #expect(buffer.hasContent)
   }
 
   @Test func carriageReturnReducesByteCount() {
-    // CR clears the current line's spans. If byte accounting is correct, a
-    // long line followed by CR and a short line should fit in a small budget.
     let buffer = TerminalBuffer(maxLines: 10, maxBytes: 200)
     buffer.append(String(repeating: "x", count: 150))
     buffer.append("\rshort")
-    // We replaced a 150-byte line with "short" — no trim should happen.
     #expect(buffer.lines.count == 1)
     #expect(buffer.lines[0].plainText == "short")
   }
@@ -344,7 +333,6 @@ struct TerminalBufferTests {
   @Test func byteCapIgnoredWhenBudgetIsHuge() {
     let buffer = TerminalBuffer(maxLines: 5, maxBytes: 100_000_000)
     buffer.append("a\nb\nc\nd\ne\nf\ng")
-    // Line cap still enforced.
     #expect(buffer.lines.count == 5)
   }
 }
