@@ -205,7 +205,7 @@ public struct TerminalPreviewText: View {
   }
 }
 
-fileprivate struct RGB {
+private struct RGB {
   let r: Double
   let g: Double
   let b: Double
