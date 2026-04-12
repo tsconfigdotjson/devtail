@@ -48,7 +48,7 @@ if [ -d "$PROJECT_DIR/icon.icon" ]; then
     --enable-on-demand-resources NO \
     --development-region en \
     --target-device mac \
-    --minimum-deployment-target 14.0 \
+    --minimum-deployment-target 26.0 \
     --platform macosx
   rm -f "$ICON_INFO_PLIST"
 fi

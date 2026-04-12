@@ -8,7 +8,7 @@ import Testing
 // divergence on fast-streaming processes.
 
 @MainActor
-fileprivate func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] {
+private func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] {
   [
     .font: NSFont.monospacedSystemFont(ofSize: 11, weight: style.bold ? .bold : .regular),
     .foregroundColor: NSColor.labelColor,
@@ -16,7 +16,7 @@ fileprivate func testAttrs(_ style: ANSIStyle) -> [NSAttributedString.Key: Any] 
 }
 
 @MainActor
-fileprivate func driveIncremental(ops: [String], buffer: TerminalBuffer) -> String {
+private func driveIncremental(ops: [String], buffer: TerminalBuffer) -> String {
   let storage = NSTextStorage()
   var state = TerminalRenderState.empty
 
