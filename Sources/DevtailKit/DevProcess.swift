@@ -1,40 +1,45 @@
-import DevtailKit
-import SwiftUI
+import Foundation
+import Observation
 
 @MainActor
 @Observable
-final class DevProcess: Identifiable {
-  let id: UUID
-  var name: String
-  var command: String
-  var workingDirectory: String
-  var auxiliaryCommands: [AuxiliaryCommand]
+public final class DevProcess: Identifiable {
+  public let id: UUID
+  public var name: String
+  public var command: String
+  public var workingDirectory: String
+  public var auxiliaryCommands: [AuxiliaryCommand]
 
-  let buffer = TerminalBuffer()
+  public let buffer: TerminalBuffer
   private var auxiliaryBuffers: [UUID: TerminalBuffer] = [:]
-  var isRunning = false
+  public var isRunning = false
 
-  private var runner: ProcessRunner?
-  private var auxiliaryRunners: [UUID: ProcessRunner] = [:]
+  private var runner: ProcessRunning?
+  private var auxiliaryRunners: [UUID: ProcessRunning] = [:]
   private var userStopped = false
+  private let makeRunner: @MainActor () -> ProcessRunning
 
-  var onStateChange: (() -> Void)?
+  public var onStateChange: (() -> Void)?
+  public var onNaturalExit: (@MainActor (Int32) -> Void)?
 
-  init(
+  public init(
     id: UUID = UUID(),
     name: String,
     command: String,
     workingDirectory: String = "",
-    auxiliaryCommands: [AuxiliaryCommand] = []
+    auxiliaryCommands: [AuxiliaryCommand] = [],
+    makeRunner: @escaping @MainActor () -> ProcessRunning = { ProcessRunner() }
   ) {
     self.id = id
     self.name = name
     self.command = command
     self.workingDirectory = workingDirectory
     self.auxiliaryCommands = auxiliaryCommands
+    self.buffer = TerminalBuffer()
+    self.makeRunner = makeRunner
   }
 
-  func bufferFor(auxiliary id: UUID) -> TerminalBuffer {
+  public func bufferFor(auxiliary id: UUID) -> TerminalBuffer {
     if let buf = auxiliaryBuffers[id] {
       return buf
     }
@@ -43,20 +48,20 @@ final class DevProcess: Identifiable {
     return buf
   }
 
-  func cleanupAuxiliaryBuffers() {
+  public func cleanupAuxiliaryBuffers() {
     let validIDs = Set(auxiliaryCommands.map(\.id))
     for key in auxiliaryBuffers.keys where !validIDs.contains(key) {
       auxiliaryBuffers.removeValue(forKey: key)
     }
   }
 
-  func start() {
+  public func start() {
     guard !isRunning else { return }
     userStopped = false
     isRunning = true
     buffer.clear()
 
-    let r = ProcessRunner()
+    let r = makeRunner()
     runner = r
     r.start(
       command: command,
@@ -75,7 +80,7 @@ final class DevProcess: Identifiable {
       }
 
       if !self.userStopped {
-        AppNotifications.processExited(name: self.name, exitCode: status)
+        self.onNaturalExit?(status)
       }
 
       self.onStateChange?()
@@ -85,7 +90,7 @@ final class DevProcess: Identifiable {
     onStateChange?()
   }
 
-  func stop() {
+  public func stop() {
     guard isRunning else { return }
     userStopped = true
     runner?.stop()
@@ -96,24 +101,24 @@ final class DevProcess: Identifiable {
     onStateChange?()
   }
 
-  func forceStop() {
+  public func forceStop() {
     userStopped = true
-    runner?.stopSync()
+    runner?.stopSync(timeout: 0.3)
     runner = nil
     for (_, r) in auxiliaryRunners {
-      r.stopSync()
+      r.stopSync(timeout: 0.3)
     }
     auxiliaryRunners.removeAll()
     isRunning = false
   }
 
-  func toggle() {
+  public func toggle() {
     if isRunning { stop() } else { start() }
   }
 
   private func startAuxiliaryCommands() {
     for aux in auxiliaryCommands {
-      let auxRunner = ProcessRunner()
+      let auxRunner = makeRunner()
       let auxBuffer = bufferFor(auxiliary: aux.id)
       auxBuffer.clear()
       auxiliaryRunners[aux.id] = auxRunner
@@ -135,12 +140,12 @@ final class DevProcess: Identifiable {
   }
 }
 
-struct AuxiliaryCommand: Identifiable {
-  let id: UUID
-  var name: String
-  var command: String
+public struct AuxiliaryCommand: Identifiable, Sendable {
+  public let id: UUID
+  public var name: String
+  public var command: String
 
-  init(id: UUID = UUID(), name: String, command: String) {
+  public init(id: UUID = UUID(), name: String, command: String) {
     self.id = id
     self.name = name
     self.command = command

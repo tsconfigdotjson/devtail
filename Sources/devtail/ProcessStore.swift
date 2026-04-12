@@ -27,10 +27,7 @@ final class ProcessStore {
     }
 
     for process in processes {
-      process.onStateChange = { [weak self] in
-        self?.scheduleSave()
-        self?.onIconChange?()
-      }
+      wireCallbacks(process)
     }
 
     let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
@@ -52,10 +49,7 @@ final class ProcessStore {
       workingDirectory: workingDirectory,
       auxiliaryCommands: auxiliaryCommands
     )
-    process.onStateChange = { [weak self] in
-      self?.scheduleSave()
-      self?.onIconChange?()
-    }
+    wireCallbacks(process)
     withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
       processes.insert(process, at: 0)
     }
@@ -97,6 +91,16 @@ final class ProcessStore {
       try? await Task.sleep(for: Self.saveDebounceDelay)
       guard let self, !Task.isCancelled, !self.isQuitting else { return }
       Persistence.save(self.processes)
+    }
+  }
+
+  private func wireCallbacks(_ process: DevProcess) {
+    process.onStateChange = { [weak self] in
+      self?.scheduleSave()
+      self?.onIconChange?()
+    }
+    process.onNaturalExit = { status in
+      AppNotifications.processExited(name: process.name, exitCode: status)
     }
   }
 

@@ -1,7 +1,19 @@
 import Foundation
 
 @MainActor
-public final class ProcessRunner {
+public protocol ProcessRunning: AnyObject {
+  func start(
+    command: String,
+    workingDirectory: String?,
+    buffer: TerminalBuffer,
+    onExit: (@MainActor @Sendable (Int32) -> Void)?
+  )
+  func stop()
+  func stopSync(timeout: TimeInterval)
+}
+
+@MainActor
+public final class ProcessRunner: ProcessRunning {
   private var process: Process?
   private var readTask: Task<Void, Never>?
   private var launchedPID: Int32 = 0
