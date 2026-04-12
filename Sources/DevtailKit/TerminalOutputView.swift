@@ -68,6 +68,12 @@ private struct TerminalNSView: NSViewRepresentable {
     private var colorCache: [ANSIColor: NSColor] = [:]
     private var isFirstUpdate = true
 
+    // Incremental render state. We append to textStorage instead of rebuilding
+    // on every version change, which is O(new spans) instead of O(all spans).
+    private var renderedFirstLineID: Int = -1
+    private var renderedLineCount: Int = 0
+    private var renderedLastLineSpanCount: Int = 0
+
     func update(buffer: TerminalBuffer, fontSize: CGFloat) {
       guard let textView else { return }
       guard let storage = textView.textStorage else { return }
@@ -77,12 +83,25 @@ private struct TerminalNSView: NSViewRepresentable {
       let maxScrollY = max(textView.frame.height - clipView.bounds.height, 0)
       let isAtBottom = isFirstUpdate || clipView.bounds.origin.y >= maxScrollY - 20
 
+      let fontChanged = fontSize != cachedFontSize
       ensureFontCache(fontSize: fontSize)
-      let attrStr = buildAttributedString(buffer: buffer, fontSize: fontSize)
+
+      let currentFirstID = buffer.lines.first?.id ?? -1
+      let trimmedOrCleared =
+        renderedFirstLineID != currentFirstID
+        || buffer.lines.count < renderedLineCount
 
       storage.beginEditing()
-      storage.setAttributedString(attrStr)
+      if fontChanged || trimmedOrCleared || renderedLineCount == 0 {
+        storage.setAttributedString(buildFullAttributedString(buffer: buffer))
+      } else {
+        appendIncremental(buffer: buffer, storage: storage)
+      }
       storage.endEditing()
+
+      renderedFirstLineID = currentFirstID
+      renderedLineCount = buffer.lines.count
+      renderedLastLineSpanCount = buffer.lines.last?.spans.count ?? 0
 
       if isAtBottom {
         if isFirstUpdate {
@@ -113,47 +132,69 @@ private struct TerminalNSView: NSViewRepresentable {
       return resolved
     }
 
-    private func buildAttributedString(buffer: TerminalBuffer, fontSize: CGFloat) -> NSAttributedString {
+    private var defaultAttrs: [NSAttributedString.Key: Any] {
+      [.font: regularFont!, .foregroundColor: NSColor.labelColor]
+    }
+
+    private func attributes(for style: ANSIStyle) -> [NSAttributedString.Key: Any] {
+      var attrs = defaultAttrs
+      if style.foreground != .default {
+        attrs[.foregroundColor] = resolveColor(style.foreground)
+      }
+      if style.bold {
+        attrs[.font] = boldFont!
+      }
+      if style.dim, style.foreground == .default {
+        attrs[.foregroundColor] = NSColor.secondaryLabelColor
+      }
+      if style.underline {
+        attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue
+      }
+      if style.strikethrough {
+        attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+      }
+      return attrs
+    }
+
+    private func buildFullAttributedString(buffer: TerminalBuffer) -> NSAttributedString {
       let result = NSMutableAttributedString()
-      let regFont = regularFont!
-      let bldFont = boldFont!
-      let defaultAttrs: [NSAttributedString.Key: Any] = [
-        .font: regFont,
-        .foregroundColor: NSColor.labelColor,
-      ]
-
       for (i, line) in buffer.lines.enumerated() {
-        if line.isEmpty {
-          result.append(NSAttributedString(string: " ", attributes: defaultAttrs))
-        } else {
-          for span in line.spans {
-            var attrs = defaultAttrs
-            let style = span.style
-
-            if style.foreground != .default {
-              attrs[.foregroundColor] = resolveColor(style.foreground)
-            }
-            if style.bold {
-              attrs[.font] = bldFont
-            }
-            if style.dim, style.foreground == .default {
-              attrs[.foregroundColor] = NSColor.secondaryLabelColor
-            }
-            if style.underline {
-              attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue
-            }
-            if style.strikethrough {
-              attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
-            }
-
-            result.append(NSAttributedString(string: span.text, attributes: attrs))
-          }
+        for span in line.spans {
+          result.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
         }
         if i < buffer.lines.count - 1 {
           result.append(NSAttributedString(string: "\n", attributes: defaultAttrs))
         }
       }
       return result
+    }
+
+    private func appendIncremental(buffer: TerminalBuffer, storage: NSTextStorage) {
+      let oldCount = renderedLineCount
+      guard oldCount > 0 else { return }
+
+      let oldLastIndex = oldCount - 1
+      let append = NSMutableAttributedString()
+
+      // Extend the previously-last line with any new spans.
+      let oldLastLine = buffer.lines[oldLastIndex]
+      if oldLastLine.spans.count > renderedLastLineSpanCount {
+        for span in oldLastLine.spans[renderedLastLineSpanCount...] {
+          append.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
+        }
+      }
+
+      // Append any new lines after the old last line.
+      for i in oldCount..<buffer.lines.count {
+        append.append(NSAttributedString(string: "\n", attributes: defaultAttrs))
+        for span in buffer.lines[i].spans {
+          append.append(NSAttributedString(string: span.text, attributes: attributes(for: span.style)))
+        }
+      }
+
+      if append.length > 0 {
+        storage.append(append)
+      }
     }
   }
 }
@@ -215,145 +256,80 @@ public struct TerminalPreviewText: View {
 }
 
 extension ANSIColor {
-  public var swiftUIColor: Color {
+  // Shared palette math. Returns 0-1 RGB components; SwiftUI + AppKit wrappers
+  // consume this to avoid ~80 lines of duplicated switch statements.
+  fileprivate var rgbComponents: (r: Double, g: Double, b: Double)? {
     switch self {
     case .default:
-      return .primary
+      return nil
     case .standard(let n):
-      return Self.standardSwiftUIColor(n)
+      return Self.standardRGB(n)
     case .bright(let n):
-      return Self.brightSwiftUIColor(n)
+      return Self.brightRGB(n)
     case .palette(let n):
-      return Self.paletteSwiftUIColor(n)
+      return Self.paletteRGB(n)
     case .rgb(let r, let g, let b):
-      return Color(
-        red: Double(r) / 255,
-        green: Double(g) / 255,
-        blue: Double(b) / 255
-      )
+      return (Double(r) / 255, Double(g) / 255, Double(b) / 255)
     }
   }
 
-  private static func standardSwiftUIColor(_ index: UInt8) -> Color {
+  public var swiftUIColor: Color {
+    guard let rgb = rgbComponents else { return .primary }
+    return Color(red: rgb.r, green: rgb.g, blue: rgb.b)
+  }
+
+  public var nsColor: NSColor {
+    guard let rgb = rgbComponents else { return .labelColor }
+    return NSColor(red: rgb.r, green: rgb.g, blue: rgb.b, alpha: 1)
+  }
+
+  private static func standardRGB(_ index: UInt8) -> (Double, Double, Double) {
     switch index {
-    case 0: Color(red: 0.2, green: 0.2, blue: 0.2)
-    case 1: Color(red: 0.85, green: 0.25, blue: 0.25)
-    case 2: Color(red: 0.25, green: 0.75, blue: 0.35)
-    case 3: Color(red: 0.85, green: 0.75, blue: 0.25)
-    case 4: Color(red: 0.35, green: 0.45, blue: 0.9)
-    case 5: Color(red: 0.8, green: 0.35, blue: 0.8)
-    case 6: Color(red: 0.3, green: 0.8, blue: 0.85)
-    case 7: Color(red: 0.8, green: 0.8, blue: 0.8)
-    default: .primary
+    case 0: (0.2, 0.2, 0.2)
+    case 1: (0.85, 0.25, 0.25)
+    case 2: (0.25, 0.75, 0.35)
+    case 3: (0.85, 0.75, 0.25)
+    case 4: (0.35, 0.45, 0.9)
+    case 5: (0.8, 0.35, 0.8)
+    case 6: (0.3, 0.8, 0.85)
+    case 7: (0.8, 0.8, 0.8)
+    default: (1, 1, 1)
     }
   }
 
-  private static func brightSwiftUIColor(_ index: UInt8) -> Color {
+  private static func brightRGB(_ index: UInt8) -> (Double, Double, Double) {
     switch index {
-    case 0: Color(red: 0.5, green: 0.5, blue: 0.5)
-    case 1: Color(red: 1.0, green: 0.35, blue: 0.35)
-    case 2: Color(red: 0.35, green: 0.95, blue: 0.45)
-    case 3: Color(red: 1.0, green: 0.95, blue: 0.35)
-    case 4: Color(red: 0.45, green: 0.55, blue: 1.0)
-    case 5: Color(red: 0.95, green: 0.45, blue: 0.95)
-    case 6: Color(red: 0.4, green: 0.95, blue: 1.0)
-    case 7: Color(red: 1.0, green: 1.0, blue: 1.0)
-    default: .primary
+    case 0: (0.5, 0.5, 0.5)
+    case 1: (1.0, 0.35, 0.35)
+    case 2: (0.35, 0.95, 0.45)
+    case 3: (1.0, 0.95, 0.35)
+    case 4: (0.45, 0.55, 1.0)
+    case 5: (0.95, 0.45, 0.95)
+    case 6: (0.4, 0.95, 1.0)
+    case 7: (1.0, 1.0, 1.0)
+    default: (1, 1, 1)
     }
   }
 
-  private static func paletteSwiftUIColor(_ index: UInt8) -> Color {
+  private static func paletteRGB(_ index: UInt8) -> (Double, Double, Double) {
     let n = Int(index)
     if n < 8 {
-      return standardSwiftUIColor(index)
+      return standardRGB(index)
     } else if n < 16 {
-      return brightSwiftUIColor(UInt8(n - 8))
+      return brightRGB(UInt8(n - 8))
     } else if n < 232 {
       let adjusted = n - 16
       let r = adjusted / 36
       let g = (adjusted % 36) / 6
       let b = adjusted % 6
-      return Color(
-        red: r == 0 ? 0 : Double(r * 40 + 55) / 255,
-        green: g == 0 ? 0 : Double(g * 40 + 55) / 255,
-        blue: b == 0 ? 0 : Double(b * 40 + 55) / 255
+      return (
+        r == 0 ? 0 : Double(r * 40 + 55) / 255,
+        g == 0 ? 0 : Double(g * 40 + 55) / 255,
+        b == 0 ? 0 : Double(b * 40 + 55) / 255
       )
     } else {
       let gray = Double((n - 232) * 10 + 8) / 255
-      return Color(red: gray, green: gray, blue: gray)
-    }
-  }
-}
-
-extension ANSIColor {
-  public var nsColor: NSColor {
-    switch self {
-    case .default:
-      return .labelColor
-    case .standard(let n):
-      return Self.standardNSColor(n)
-    case .bright(let n):
-      return Self.brightNSColor(n)
-    case .palette(let n):
-      return Self.paletteNSColor(n)
-    case .rgb(let r, let g, let b):
-      return NSColor(
-        red: CGFloat(r) / 255,
-        green: CGFloat(g) / 255,
-        blue: CGFloat(b) / 255,
-        alpha: 1
-      )
-    }
-  }
-
-  private static func standardNSColor(_ index: UInt8) -> NSColor {
-    switch index {
-    case 0: NSColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1)
-    case 1: NSColor(red: 0.85, green: 0.25, blue: 0.25, alpha: 1)
-    case 2: NSColor(red: 0.25, green: 0.75, blue: 0.35, alpha: 1)
-    case 3: NSColor(red: 0.85, green: 0.75, blue: 0.25, alpha: 1)
-    case 4: NSColor(red: 0.35, green: 0.45, blue: 0.9, alpha: 1)
-    case 5: NSColor(red: 0.8, green: 0.35, blue: 0.8, alpha: 1)
-    case 6: NSColor(red: 0.3, green: 0.8, blue: 0.85, alpha: 1)
-    case 7: NSColor(red: 0.8, green: 0.8, blue: 0.8, alpha: 1)
-    default: .labelColor
-    }
-  }
-
-  private static func brightNSColor(_ index: UInt8) -> NSColor {
-    switch index {
-    case 0: NSColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
-    case 1: NSColor(red: 1.0, green: 0.35, blue: 0.35, alpha: 1)
-    case 2: NSColor(red: 0.35, green: 0.95, blue: 0.45, alpha: 1)
-    case 3: NSColor(red: 1.0, green: 0.95, blue: 0.35, alpha: 1)
-    case 4: NSColor(red: 0.45, green: 0.55, blue: 1.0, alpha: 1)
-    case 5: NSColor(red: 0.95, green: 0.45, blue: 0.95, alpha: 1)
-    case 6: NSColor(red: 0.4, green: 0.95, blue: 1.0, alpha: 1)
-    case 7: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1)
-    default: .labelColor
-    }
-  }
-
-  private static func paletteNSColor(_ index: UInt8) -> NSColor {
-    let n = Int(index)
-    if n < 8 {
-      return standardNSColor(index)
-    } else if n < 16 {
-      return brightNSColor(UInt8(n - 8))
-    } else if n < 232 {
-      let adjusted = n - 16
-      let r = adjusted / 36
-      let g = (adjusted % 36) / 6
-      let b = adjusted % 6
-      return NSColor(
-        red: r == 0 ? 0 : CGFloat(r * 40 + 55) / 255,
-        green: g == 0 ? 0 : CGFloat(g * 40 + 55) / 255,
-        blue: b == 0 ? 0 : CGFloat(b * 40 + 55) / 255,
-        alpha: 1
-      )
-    } else {
-      let gray = CGFloat((n - 232) * 10 + 8) / 255
-      return NSColor(red: gray, green: gray, blue: gray, alpha: 1)
+      return (gray, gray, gray)
     }
   }
 }

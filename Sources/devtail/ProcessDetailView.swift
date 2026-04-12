@@ -140,13 +140,10 @@ struct ProcessDetailView: View {
   }
 
   private var currentBuffer: TerminalBuffer {
-    if selectedTab == 0 {
-      return process.buffer
-    }
     let auxIndex = selectedTab - 1
-    guard auxIndex >= 0, auxIndex < process.auxiliaryCommands.count else {
-      return process.buffer
+    if selectedTab > 0, auxIndex < process.auxiliaryCommands.count {
+      return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
     }
-    return process.bufferFor(auxiliary: process.auxiliaryCommands[auxIndex].id)
+    return process.buffer
   }
 }

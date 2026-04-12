@@ -6,6 +6,18 @@ public final class ProcessRunner {
   private var readTask: Task<Void, Never>?
   private var launchedPID: Int32 = 0
 
+  nonisolated private static let readBatchBytes = 16_384
+  nonisolated private static let readFlushInterval: Duration = .milliseconds(50)
+  nonisolated private static let sigKillDelay: Duration = .milliseconds(800)
+
+  // Env vars passed to subprocesses. Minimum set that still lets typical dev
+  // tools (node, python, go) resolve binaries and respect locale/shell config.
+  nonisolated private static let inheritedEnvKeys: [String] = [
+    "PATH", "SHELL", "PWD", "TMPDIR",
+    "LANG", "LC_ALL",
+    "NODE_ENV",
+  ]
+
   public init() {}
 
   public var isRunning: Bool {
@@ -29,12 +41,7 @@ public final class ProcessRunner {
       proc.currentDirectoryURL = URL(fileURLWithPath: expanded)
     }
 
-    proc.environment = [
-      "HOME": NSHomeDirectory(),
-      "USER": NSUserName(),
-      "FORCE_COLOR": "1",
-      "TERM": "xterm-256color",
-    ]
+    proc.environment = Self.makeEnvironment()
 
     let pipe = Pipe()
     proc.standardOutput = pipe
@@ -63,7 +70,7 @@ public final class ProcessRunner {
         }
 
         let now = ContinuousClock.now
-        if now - lastFlush >= .milliseconds(50) || pending.count > 16_384 {
+        if now - lastFlush >= Self.readFlushInterval || pending.count > Self.readBatchBytes {
           let batch = pending
           pending = ""
           lastFlush = now
@@ -100,7 +107,7 @@ public final class ProcessRunner {
     kill(-pid, SIGTERM)
 
     Task.detached {
-      try? await Task.sleep(for: .milliseconds(800))
+      try? await Task.sleep(for: Self.sigKillDelay)
       kill(-pid, SIGKILL)
     }
 
@@ -110,25 +117,52 @@ public final class ProcessRunner {
     readTask = nil
   }
 
-  public func stopSync(timeout: TimeInterval = 2.0) {
+  // Synchronous stop for the quit path. Waits up to `timeout` for graceful
+  // exit via DispatchSource.exit (returns early on exit), then SIGKILLs.
+  public func stopSync(timeout: TimeInterval = 0.3) {
     let pid = launchedPID
     guard pid != 0 else { return }
 
     kill(-pid, SIGTERM)
 
-    let deadline = Date().addingTimeInterval(timeout)
-    while kill(pid, 0) == 0 && Date() < deadline {
-      Thread.sleep(forTimeInterval: 0.01)
+    let sem = DispatchSemaphore(value: 0)
+    let source = DispatchSource.makeProcessSource(
+      identifier: pid,
+      eventMask: .exit,
+      queue: .global(qos: .userInitiated)
+    )
+    source.setEventHandler { sem.signal() }
+    source.resume()
+
+    // Guard against the process exiting between SIGTERM and subscribe.
+    if kill(pid, 0) != 0 {
+      sem.signal()
     }
 
-    if kill(pid, 0) == 0 {
+    if sem.wait(timeout: .now() + timeout) == .timedOut {
       kill(-pid, SIGKILL)
-      Thread.sleep(forTimeInterval: 0.05)
     }
+    source.cancel()
 
     process = nil
     launchedPID = 0
     readTask?.cancel()
     readTask = nil
+  }
+
+  private static func makeEnvironment() -> [String: String] {
+    let parent = ProcessInfo.processInfo.environment
+    var env: [String: String] = [
+      "HOME": NSHomeDirectory(),
+      "USER": NSUserName(),
+      "FORCE_COLOR": "1",
+      "TERM": "xterm-256color",
+    ]
+    for key in inheritedEnvKeys {
+      if let value = parent[key] {
+        env[key] = value
+      }
+    }
+    return env
   }
 }

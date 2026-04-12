@@ -2,6 +2,12 @@ import Testing
 
 @testable import DevtailKit
 
+extension TerminalLine {
+  fileprivate var plainText: String {
+    spans.map(\.text).joined()
+  }
+}
+
 @MainActor
 struct TerminalBufferTests {
 

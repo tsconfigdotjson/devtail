@@ -125,6 +125,10 @@ function App() {
                   <img
                     src={`${import.meta.env.BASE_URL}menubar.png`}
                     alt="devtail menu bar interface"
+                    width={812}
+                    height={1092}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full max-w-sm lg:max-w-none transition-transform duration-500 hover:scale-[1.03]"
                   />
                 </div>

@@ -7,6 +7,10 @@ final class ProcessStore {
   var processes: [DevProcess]
   var onIconChange: (() -> Void)?
   private var isQuitting = false
+  private var pendingSave: Task<Void, Never>?
+
+  private static let autoStartDelay: Duration = .milliseconds(100)
+  private static let saveDebounceDelay: Duration = .milliseconds(250)
 
   init() {
     let saved = Persistence.load()
@@ -24,7 +28,7 @@ final class ProcessStore {
 
     for process in processes {
       process.onStateChange = { [weak self] in
-        self?.save()
+        self?.scheduleSave()
         self?.onIconChange?()
       }
     }
@@ -32,7 +36,7 @@ final class ProcessStore {
     let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
     if !autoStartIDs.isEmpty {
       Task { @MainActor [weak self] in
-        try? await Task.sleep(for: .milliseconds(100))
+        try? await Task.sleep(for: Self.autoStartDelay)
         guard let self else { return }
         for process in self.processes where autoStartIDs.contains(process.id) {
           process.start()
@@ -49,13 +53,13 @@ final class ProcessStore {
       auxiliaryCommands: auxiliaryCommands
     )
     process.onStateChange = { [weak self] in
-      self?.save()
+      self?.scheduleSave()
       self?.onIconChange?()
     }
     withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
       processes.insert(process, at: 0)
     }
-    save()
+    scheduleSave()
   }
 
   func removeProcess(id: UUID) {
@@ -69,7 +73,7 @@ final class ProcessStore {
     withAnimation(.spring(duration: 0.3)) {
       processes.removeAll { $0.id == id }
     }
-    save()
+    scheduleSave()
   }
 
   func updateProcess(
@@ -83,16 +87,22 @@ final class ProcessStore {
     process.workingDirectory = workingDirectory
     process.auxiliaryCommands = auxiliaryCommands
     process.cleanupAuxiliaryBuffers()
-    save()
+    scheduleSave()
   }
 
-  func save() {
+  func scheduleSave() {
     guard !isQuitting else { return }
-    Persistence.save(processes)
+    pendingSave?.cancel()
+    pendingSave = Task { @MainActor [weak self] in
+      try? await Task.sleep(for: Self.saveDebounceDelay)
+      guard let self, !Task.isCancelled, !self.isQuitting else { return }
+      Persistence.save(self.processes)
+    }
   }
 
   func stopAllForQuit() {
     isQuitting = true
+    pendingSave?.cancel()
     Persistence.save(processes)
     for process in processes where process.isRunning {
       process.forceStop()

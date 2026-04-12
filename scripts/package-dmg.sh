@@ -40,16 +40,17 @@ cp "$BUILD_DIR/$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/$EXECUTABLE"
 # Compile Liquid Glass app icon
 if [ -d "$PROJECT_DIR/icon.icon" ]; then
   echo "▸ Compiling Liquid Glass icon…"
+  ICON_INFO_PLIST="${TMPDIR:-/tmp}/devtail-icon-info.$$.plist"
   actool "$PROJECT_DIR/icon.icon" --compile "$APP_BUNDLE/Contents/Resources" \
     --output-format human-readable-text --notices --warnings --errors \
-    --output-partial-info-plist /tmp/devtail-icon-info.plist \
+    --output-partial-info-plist "$ICON_INFO_PLIST" \
     --app-icon icon --include-all-app-icons \
     --enable-on-demand-resources NO \
     --development-region en \
     --target-device mac \
-    --minimum-deployment-target 26.0 \
+    --minimum-deployment-target 14.0 \
     --platform macosx
-  rm -f /tmp/devtail-icon-info.plist
+  rm -f "$ICON_INFO_PLIST"
 fi
 
 cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
