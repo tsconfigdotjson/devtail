@@ -23,5 +23,11 @@ jobs:
       - name: Build
         run: swift build
 
-      - name: Test
-        run: swift test
+      # Split test invocations: running both targets in one `swift test` call
+      # on macos-26 trips SIGTRAP when DevtailKit subprocess tests race with
+      # devtailAppTests' NSWindow/UserDefaults tests.
+      - name: Test DevtailKit
+        run: swift test --filter DevtailKitTests
+
+      - name: Test devtail app
+        run: swift test --filter devtailAppTests

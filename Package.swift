@@ -19,5 +19,9 @@ let package = Package(
             name: "DevtailKitTests",
             dependencies: ["DevtailKit"]
         ),
+        .testTarget(
+            name: "devtailAppTests",
+            dependencies: ["devtail", "DevtailKit"]
+        ),
     ]
 )

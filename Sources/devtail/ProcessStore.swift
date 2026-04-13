@@ -9,11 +9,29 @@ final class ProcessStore {
   private var isQuitting = false
   private var pendingSave: Task<Void, Never>?
 
-  private static let autoStartDelay: Duration = .milliseconds(100)
-  private static let saveDebounceDelay: Duration = .milliseconds(250)
+  private let defaults: UserDefaults
+  private let persistenceKey: String
+  private let makeRunner: @MainActor () -> ProcessRunning
+  private let autoStartDelay: Duration
+  private let saveDebounceDelay: Duration
 
-  init() {
-    let saved = Persistence.load()
+  static let defaultAutoStartDelay: Duration = .milliseconds(100)
+  static let defaultSaveDebounceDelay: Duration = .milliseconds(250)
+
+  init(
+    defaults: UserDefaults = .standard,
+    persistenceKey: String = Persistence.defaultKey,
+    makeRunner: @escaping @MainActor () -> ProcessRunning = { ProcessRunner() },
+    autoStartDelay: Duration = ProcessStore.defaultAutoStartDelay,
+    saveDebounceDelay: Duration = ProcessStore.defaultSaveDebounceDelay
+  ) {
+    self.defaults = defaults
+    self.persistenceKey = persistenceKey
+    self.makeRunner = makeRunner
+    self.autoStartDelay = autoStartDelay
+    self.saveDebounceDelay = saveDebounceDelay
+
+    let saved = Persistence.load(defaults: defaults, key: persistenceKey)
     self.processes = saved.map { config in
       DevProcess(
         id: config.id,
@@ -22,7 +40,8 @@ final class ProcessStore {
         workingDirectory: config.workingDirectory,
         auxiliaryCommands: config.auxiliaryCommands.map {
           AuxiliaryCommand(id: $0.id, name: $0.name, command: $0.command)
-        }
+        },
+        makeRunner: makeRunner
       )
     }
 
@@ -32,8 +51,9 @@ final class ProcessStore {
 
     let autoStartIDs = Set(saved.filter(\.wasRunning).map(\.id))
     if !autoStartIDs.isEmpty {
+      let delay = autoStartDelay
       Task { @MainActor [weak self] in
-        try? await Task.sleep(for: Self.autoStartDelay)
+        try? await Task.sleep(for: delay)
         guard let self else { return }
         for process in self.processes where autoStartIDs.contains(process.id) {
           process.start()
@@ -47,7 +67,8 @@ final class ProcessStore {
       name: name,
       command: command,
       workingDirectory: workingDirectory,
-      auxiliaryCommands: auxiliaryCommands
+      auxiliaryCommands: auxiliaryCommands,
+      makeRunner: makeRunner
     )
     wireCallbacks(process)
     withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
@@ -87,10 +108,11 @@ final class ProcessStore {
   func scheduleSave() {
     guard !isQuitting else { return }
     pendingSave?.cancel()
+    let delay = saveDebounceDelay
     pendingSave = Task { @MainActor [weak self] in
-      try? await Task.sleep(for: Self.saveDebounceDelay)
+      try? await Task.sleep(for: delay)
       guard let self, !Task.isCancelled, !self.isQuitting else { return }
-      Persistence.save(self.processes)
+      Persistence.save(self.processes, defaults: self.defaults, key: self.persistenceKey)
     }
   }
 
@@ -107,7 +129,7 @@ final class ProcessStore {
   func stopAllForQuit() {
     isQuitting = true
     pendingSave?.cancel()
-    Persistence.save(processes)
+    Persistence.save(processes, defaults: defaults, key: persistenceKey)
     for process in processes where process.isRunning {
       process.forceStop()
     }
