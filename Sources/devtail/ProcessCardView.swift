@@ -26,12 +26,16 @@ struct ProcessCardView: View {
   var body: some View {
     Button(action: onSelect) {
       VStack(alignment: .leading, spacing: 8) {
-        HStack {
+        HStack(spacing: 6) {
           Text(process.name)
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(.primary)
 
           Spacer()
+
+          if process.isRunning, !process.detectedPorts.isEmpty {
+            PortBadges(ports: process.detectedPorts)
+          }
 
           StatusDot(isRunning: process.isRunning)
         }
@@ -111,6 +115,36 @@ struct ProcessCardView: View {
       Divider()
       Button("Delete", role: .destructive) {
         onDelete()
+      }
+    }
+  }
+}
+
+enum PortFormatter {
+  static func label(for port: Int) -> String { ":" + String(port) }
+  static func overflow(for extra: Int) -> String { "+" + String(extra) }
+}
+
+struct PortBadges: View {
+  let ports: [Int]
+
+  var body: some View {
+    HStack(spacing: 4) {
+      ForEach(ports.prefix(3), id: \.self) { port in
+        Text(PortFormatter.label(for: port))
+          .font(.system(size: 10, weight: .medium, design: .monospaced))
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 5)
+          .padding(.vertical, 1)
+          .background(
+            Capsule()
+              .fill(Color.accentColor.opacity(0.12))
+          )
+      }
+      if ports.count > 3 {
+        Text(PortFormatter.overflow(for: ports.count - 3))
+          .font(.system(size: 10, weight: .medium, design: .monospaced))
+          .foregroundStyle(.tertiary)
       }
     }
   }

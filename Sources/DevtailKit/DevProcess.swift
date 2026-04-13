@@ -13,6 +13,7 @@ public final class DevProcess: Identifiable {
   public let buffer: TerminalBuffer
   private var auxiliaryBuffers: [UUID: TerminalBuffer] = [:]
   public var isRunning = false
+  public var detectedPorts: [Int] = []
 
   private var runner: ProcessRunning?
   private var auxiliaryRunners: [UUID: ProcessRunning] = [:]
@@ -38,6 +39,8 @@ public final class DevProcess: Identifiable {
     self.buffer = TerminalBuffer()
     self.makeRunner = makeRunner
   }
+
+  public var currentPID: Int32 { runner?.pid ?? 0 }
 
   public func bufferFor(auxiliary id: UUID) -> TerminalBuffer {
     if let buf = auxiliaryBuffers[id] {
@@ -71,6 +74,7 @@ public final class DevProcess: Identifiable {
       guard let self, self.runner === r else { return }
       self.runner = nil
       self.isRunning = false
+      self.detectedPorts = []
       self.stopAuxiliaryCommands()
 
       if status == 0 {
@@ -97,6 +101,7 @@ public final class DevProcess: Identifiable {
     runner = nil
     stopAuxiliaryCommands()
     isRunning = false
+    detectedPorts = []
     buffer.append("\n\u{1B}[2mProcess stopped\u{1B}[0m\n")
     onStateChange?()
   }
@@ -110,6 +115,7 @@ public final class DevProcess: Identifiable {
     }
     auxiliaryRunners.removeAll()
     isRunning = false
+    detectedPorts = []
   }
 
   public func toggle() {

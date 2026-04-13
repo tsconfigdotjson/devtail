@@ -2,6 +2,7 @@ import Foundation
 
 @MainActor
 public protocol ProcessRunning: AnyObject {
+  var pid: Int32 { get }
   func start(
     command: String,
     workingDirectory: String?,
@@ -10,6 +11,10 @@ public protocol ProcessRunning: AnyObject {
   )
   func stop()
   func stopSync(timeout: TimeInterval)
+}
+
+extension ProcessRunning {
+  public var pid: Int32 { 0 }
 }
 
 @MainActor
@@ -34,6 +39,8 @@ public final class ProcessRunner: ProcessRunning {
   public var isRunning: Bool {
     process?.isRunning ?? false
   }
+
+  public var pid: Int32 { launchedPID }
 
   public func start(
     command: String,

@@ -24,6 +24,26 @@ struct ProcessRunnerIntegrationTests {
     buffer.lines.map { $0.spans.map(\.text).joined() }.joined(separator: "\n")
   }
 
+  @Test func exposesLaunchedPIDWhileRunning() async {
+    let runner = ProcessRunner()
+    let buffer = TerminalBuffer()
+    let gate = AsyncGate()
+
+    #expect(runner.pid == 0)
+
+    runner.start(
+      command: "sleep 1",
+      workingDirectory: nil,
+      buffer: buffer
+    ) { _ in gate.open() }
+
+    #expect(runner.pid > 0)
+    #expect(runner.pid != ProcessInfo.processInfo.processIdentifier)
+
+    await gate.wait(timeout: Self.shortTimeout)
+    #expect(runner.pid == 0)
+  }
+
   @Test func runsCommandAndCapturesStdout() async {
     let runner = ProcessRunner()
     let buffer = TerminalBuffer()

@@ -14,22 +14,33 @@ final class ProcessStore {
   private let makeRunner: @MainActor () -> ProcessRunning
   private let autoStartDelay: Duration
   private let saveDebounceDelay: Duration
+  private let detectPorts: @Sendable ([Int32]) -> [Int32: [Int]]
+  private let portPollInterval: Duration
 
   static let defaultAutoStartDelay: Duration = .milliseconds(100)
   static let defaultSaveDebounceDelay: Duration = .milliseconds(250)
+  static let defaultPortPollInterval: Duration = .seconds(1)
+  static let portPollMaxAttempts = 30
+
+  private var portPollTask: Task<Void, Never>?
+  private var pendingPortDetection: [UUID: Int] = [:]
 
   init(
     defaults: UserDefaults = .standard,
     persistenceKey: String = Persistence.defaultKey,
     makeRunner: @escaping @MainActor () -> ProcessRunning = { ProcessRunner() },
     autoStartDelay: Duration = ProcessStore.defaultAutoStartDelay,
-    saveDebounceDelay: Duration = ProcessStore.defaultSaveDebounceDelay
+    saveDebounceDelay: Duration = ProcessStore.defaultSaveDebounceDelay,
+    portPollInterval: Duration = ProcessStore.defaultPortPollInterval,
+    detectPorts: @escaping @Sendable ([Int32]) -> [Int32: [Int]] = { PortDetector.detect(rootPIDs: $0) }
   ) {
     self.defaults = defaults
     self.persistenceKey = persistenceKey
     self.makeRunner = makeRunner
     self.autoStartDelay = autoStartDelay
     self.saveDebounceDelay = saveDebounceDelay
+    self.portPollInterval = portPollInterval
+    self.detectPorts = detectPorts
 
     let saved = Persistence.load(defaults: defaults, key: persistenceKey)
     self.processes = saved.map { config in
@@ -120,18 +131,84 @@ final class ProcessStore {
     process.onStateChange = { [weak self] in
       self?.scheduleSave()
       self?.onIconChange?()
+      self?.handlePortDetectionStateChange(for: process)
     }
     process.onNaturalExit = { status in
       AppNotifications.processExited(name: process.name, exitCode: status)
     }
   }
 
+  private func handlePortDetectionStateChange(for process: DevProcess) {
+    if process.isRunning, process.detectedPorts.isEmpty {
+      pendingPortDetection[process.id] = 0
+      ensurePortPolling()
+    } else {
+      pendingPortDetection.removeValue(forKey: process.id)
+    }
+  }
+
   func stopAllForQuit() {
     isQuitting = true
     pendingSave?.cancel()
+    portPollTask?.cancel()
+    portPollTask = nil
     Persistence.save(processes, defaults: defaults, key: persistenceKey)
     for process in processes where process.isRunning {
       process.forceStop()
+    }
+  }
+
+  private func ensurePortPolling() {
+    guard portPollTask == nil, !pendingPortDetection.isEmpty else { return }
+    let interval = portPollInterval
+    portPollTask = Task { @MainActor [weak self] in
+      while true {
+        try? await Task.sleep(for: interval)
+        guard let self, !Task.isCancelled else { break }
+        if self.pendingPortDetection.isEmpty { break }
+        await self.tickPortDetection()
+      }
+      self?.portPollTask = nil
+    }
+  }
+
+  func tickPortDetection() async {
+    var pidByID: [UUID: Int32] = [:]
+    for id in pendingPortDetection.keys {
+      guard let process = processes.first(where: { $0.id == id }),
+        process.isRunning
+      else {
+        pendingPortDetection.removeValue(forKey: id)
+        continue
+      }
+      let pid = process.currentPID
+      if pid > 0 { pidByID[id] = pid }
+    }
+    guard !pidByID.isEmpty else { return }
+
+    let pids = Array(pidByID.values)
+    let detector = detectPorts
+    let portsByPID = await Task.detached(priority: .utility) {
+      detector(pids)
+    }.value
+
+    for (id, pid) in pidByID {
+      guard let process = processes.first(where: { $0.id == id }) else {
+        pendingPortDetection.removeValue(forKey: id)
+        continue
+      }
+      let newPorts = portsByPID[pid] ?? []
+      if !newPorts.isEmpty {
+        process.detectedPorts = newPorts
+        pendingPortDetection.removeValue(forKey: id)
+      } else {
+        let attempts = (pendingPortDetection[id] ?? 0) + 1
+        if attempts >= Self.portPollMaxAttempts {
+          pendingPortDetection.removeValue(forKey: id)
+        } else {
+          pendingPortDetection[id] = attempts
+        }
+      }
     }
   }
 }
