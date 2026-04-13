@@ -17,10 +17,14 @@ struct SavedProcess: Codable {
 }
 
 enum Persistence {
-  private static let key = "devtail.processes"
+  static let defaultKey = "devtail.processes"
 
   @MainActor
-  static func save(_ processes: [DevProcess]) {
+  static func save(
+    _ processes: [DevProcess],
+    defaults: UserDefaults = .standard,
+    key: String = defaultKey
+  ) {
     let saved = processes.map { p in
       SavedProcess(
         id: p.id,
@@ -34,12 +38,15 @@ enum Persistence {
       )
     }
     if let data = try? JSONEncoder().encode(saved) {
-      UserDefaults.standard.set(data, forKey: key)
+      defaults.set(data, forKey: key)
     }
   }
 
-  static func load() -> [SavedProcess] {
-    guard let data = UserDefaults.standard.data(forKey: key),
+  static func load(
+    defaults: UserDefaults = .standard,
+    key: String = defaultKey
+  ) -> [SavedProcess] {
+    guard let data = defaults.data(forKey: key),
       let saved = try? JSONDecoder().decode([SavedProcess].self, from: data)
     else {
       return []

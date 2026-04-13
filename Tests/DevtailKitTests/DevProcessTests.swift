@@ -54,6 +54,20 @@ struct DevProcessTests {
     return (process, f)
   }
 
+  @Test func defaultMakeRunnerSpawnsRealProcessRunner() async {
+    // Exercises the default `{ ProcessRunner() }` closure on DevProcess.init.
+    let p = DevProcess(name: "smoke", command: "exit 0")
+    var exitCode: Int32?
+    p.onNaturalExit = { status in exitCode = status }
+    p.start()
+    let deadline = ContinuousClock.now + .seconds(5)
+    while p.isRunning && ContinuousClock.now < deadline {
+      try? await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(p.isRunning == false)
+    #expect(exitCode == 0)
+  }
+
   @Test func startSetsIsRunningAndInvokesRunner() {
     let (p, f) = makeProcess()
     p.start()
@@ -217,6 +231,18 @@ struct DevProcessAuxiliaryTests {
     // After cleanup the old buffer is dropped, so a fresh lookup creates a
     // new instance.
     #expect(!fresh.hasContent)
+  }
+
+  @Test func auxiliaryNaturalExitClearsItsRunner() {
+    let aux = [AuxiliaryCommand(name: "logs", command: "tail -f log")]
+    let (p, f) = makeProcess(aux: aux)
+    p.start()
+    // Fire exit on the aux runner only; main stays running.
+    f.runners[1].fireExit(0)
+    #expect(p.isRunning == true)
+    // Stopping the main should now not double-stop the already-exited aux.
+    p.stop()
+    #expect(f.runners[1].stopCount == 0)
   }
 
   @Test func forceStopUsesSyncOnMainAndAux() {

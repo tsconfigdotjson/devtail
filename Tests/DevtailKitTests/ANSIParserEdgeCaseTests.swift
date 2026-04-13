@@ -23,6 +23,15 @@ struct ANSIParserEdgeCaseTests {
     }
   }
 
+  @Test func malformedCSIWithInvalidInteriorCharIsTreatedAsText() {
+    // `~` isn't a digit, `;`, `:`, `?`, or a terminator letter — parseCSI
+    // bails out, so the ESC is skipped and the remaining bytes flow through
+    // as plain text rather than mutating style.
+    let actions = parse("before\u{1B}[3~5mafter")
+    let text = allSpans(actions).map(\.text).joined()
+    #expect(text == "before[3~5mafter")
+  }
+
   @Test func eraseLineCode2K() {
     let actions = parse("\u{1B}[2K")
     #expect(actions.count == 1)
