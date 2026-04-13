@@ -14,6 +14,7 @@ final class RecordingRunner: ProcessRunning {
   private(set) var stopCount = 0
   private(set) var stopSyncCount = 0
   private(set) var lastCommand: String?
+  var pid: Int32 = 0
   private var pendingOnExit: (@MainActor @Sendable (Int32) -> Void)?
 
   func start(
