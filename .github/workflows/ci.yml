@@ -23,17 +23,32 @@ jobs:
       - name: Build
         run: swift build
 
-      - name: Test
-        run: swift test --enable-code-coverage
+      # Split test invocations: parallel runs across the two targets trip
+      # a SIGTRAP on macos-26 CI; running each target serially avoids it.
+      - name: Test DevtailKit
+        run: swift test --enable-code-coverage --filter DevtailKitTests
+
+      - name: Stash DevtailKit profraws
+        run: |
+          mkdir -p coverage-stash
+          BIN=$(swift build --show-bin-path)
+          mv "$BIN/codecov"/*.profraw coverage-stash/ 2>/dev/null || true
+
+      - name: Test devtail app
+        run: swift test --enable-code-coverage --filter devtailAppTests
 
       - name: Coverage report
         run: |
           BIN=$(swift build --show-bin-path)
-          PROF="$BIN/codecov/default.profdata"
+          MERGED="$BIN/codecov/merged.profdata"
           XCTEST=$(find "$BIN" -name '*.xctest' -type d | head -1)
           EXEC="$XCTEST/Contents/MacOS/$(basename "$XCTEST" .xctest)"
+          xcrun llvm-profdata merge -sparse \
+            coverage-stash/*.profraw \
+            "$BIN/codecov"/*.profraw \
+            -o "$MERGED"
           xcrun llvm-cov report \
             "$EXEC" \
-            -instr-profile="$PROF" \
+            -instr-profile="$MERGED" \
             -ignore-filename-regex='(.build|Tests)/' \
             -use-color=false
