@@ -59,8 +59,8 @@ struct ProcessStoreIntegrationTests {
     return (defaults, suite)
   }
 
-  private func seed(_ defaults: UserDefaults, processes: [SavedProcess]) {
-    let data = try! JSONEncoder().encode(processes)
+  private func seed(_ defaults: UserDefaults, processes: [SavedProcess]) throws {
+    let data = try JSONEncoder().encode(processes)
     defaults.set(data, forKey: Persistence.defaultKey)
   }
 
@@ -75,13 +75,13 @@ struct ProcessStoreIntegrationTests {
     }
   }
 
-  @Test func initLoadsPreviouslySavedProcesses() {
+  @Test func initLoadsPreviouslySavedProcesses() throws {
     let (defaults, suite) = isolatedDefaults()
     defer { defaults.removePersistentDomain(forName: suite) }
 
     let id = UUID()
     let auxID = UUID()
-    seed(
+    try seed(
       defaults,
       processes: [
         SavedProcess(
@@ -239,13 +239,13 @@ struct ProcessStoreIntegrationTests {
     #expect(saved[0].workingDirectory == "/work")
   }
 
-  @Test func autoStartsProcessesMarkedAsRunning() async {
+  @Test func autoStartsProcessesMarkedAsRunning() async throws {
     let (defaults, suite) = isolatedDefaults()
     defer { defaults.removePersistentDomain(forName: suite) }
 
     let runningID = UUID()
     let stoppedID = UUID()
-    seed(
+    try seed(
       defaults,
       processes: [
         SavedProcess(
