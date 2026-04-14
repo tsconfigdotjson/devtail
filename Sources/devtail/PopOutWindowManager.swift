@@ -35,6 +35,7 @@ final class PopOutWindowManager {
     window.minSize = NSSize(width: 300, height: 200)
     window.isReleasedWhenClosed = false
     window.center()
+    window.setFrameAutosaveName("devtail.popout")
 
     let delegate = WindowCloseDelegate { [weak self] in
       self?.windows.removeValue(forKey: key)
