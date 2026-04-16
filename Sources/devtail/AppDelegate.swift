@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
   var store: ProcessStore!
 
   private var statusItem: NSStatusItem!
@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     popover = NSPopover()
     popover.contentSize = NSSize(width: 360, height: 500)
     popover.behavior = .transient
+    popover.animates = false
+    popover.delegate = self
     popover.contentViewController = NSHostingController(
       rootView: ContentView(store: store)
         .onAppear { AppNotifications.requestPermission() }
@@ -53,8 +55,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     if popover.isShown {
       popover.close()
     } else if let button = statusItem.button {
-      popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
       NSApp.activate()
+      popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+  }
+
+  func popoverWillShow(_ notification: Notification) {
+    statusItem.button?.highlight(true)
+    if let window = popover.contentViewController?.view.window,
+      let root = window.contentView
+    {
+      pinVisualEffectStateActive(in: root)
+    }
+  }
+
+  func popoverDidShow(_ notification: Notification) {
+    guard let window = popover.contentViewController?.view.window else { return }
+    window.makeKey()
+    if let root = window.contentView {
+      pinVisualEffectStateActive(in: root)
+    }
+  }
+
+  func popoverDidClose(_ notification: Notification) {
+    statusItem.button?.highlight(false)
+  }
+
+  private func pinVisualEffectStateActive(in view: NSView) {
+    if let effect = view as? NSVisualEffectView {
+      effect.state = .active
+    }
+    for subview in view.subviews {
+      pinVisualEffectStateActive(in: subview)
     }
   }
 
