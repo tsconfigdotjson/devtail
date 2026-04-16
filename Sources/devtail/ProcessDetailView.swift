@@ -34,13 +34,13 @@ struct ProcessDetailView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(
-              Capsule()
-                .fill(Color(nsColor: .controlBackgroundColor))
+            .liquidGlassBackground(
+              in: Capsule(),
+              fallback: AnyShapeStyle(.ultraThinMaterial)
             )
             .overlay(
               Capsule()
-                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5)
             )
           }
           .buttonStyle(.plain)
@@ -90,7 +90,10 @@ struct ProcessDetailView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
       }
-      .background(Color(nsColor: .textBackgroundColor))
+      .liquidGlassBackground(
+        in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+        fallback: AnyShapeStyle(.ultraThinMaterial)
+      )
       .overlay(alignment: .bottom) {
         if isTerminalHovered {
           Button {

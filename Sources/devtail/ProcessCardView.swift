@@ -87,26 +87,24 @@ struct ProcessCardView: View {
         }
       }
       .padding(12)
-      .background(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-          .fill(Color(nsColor: .controlBackgroundColor))
+      .liquidGlassBackground(
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+        fallback: AnyShapeStyle(.thinMaterial)
       )
       .overlay(
         RoundedRectangle(cornerRadius: 10, style: .continuous)
           .strokeBorder(
             isHovered
-              ? Color.accentColor.opacity(0.3)
-              : Color(nsColor: .separatorColor),
-            lineWidth: isHovered ? 1.5 : 1
+              ? Color.accentColor.opacity(0.35)
+              : Color(nsColor: .separatorColor).opacity(0.6),
+            lineWidth: 0.5
           )
       )
-      .scaleEffect(isHovered ? 1.01 : 1.0)
+      .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PressableCardButtonStyle())
     .onHover { hovering in
-      withAnimation(.easeInOut(duration: 0.15)) {
-        isHovered = hovering
-      }
+      isHovered = hovering
     }
     .contextMenu {
       Button(process.isRunning ? "Stop Process" : "Start Process") {
@@ -168,13 +166,32 @@ struct TerminalBlock<Content: View>: View {
     content()
       .padding(8)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .fill(Color(nsColor: .textBackgroundColor))
+      .liquidGlassBackground(
+        in: RoundedRectangle(cornerRadius: 6, style: .continuous),
+        fallback: AnyShapeStyle(.ultraThinMaterial)
       )
       .overlay(
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
+          .strokeBorder(Color(nsColor: .separatorColor).opacity(0.4), lineWidth: 0.5)
       )
+  }
+}
+
+extension View {
+  @ViewBuilder
+  func liquidGlassBackground<S: Shape>(in shape: S, fallback: AnyShapeStyle) -> some View {
+    if #available(macOS 26.0, *) {
+      self.glassEffect(.clear, in: shape)
+    } else {
+      self.background(shape.fill(fallback))
+    }
+  }
+}
+
+struct PressableCardButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .opacity(configuration.isPressed ? 0.75 : 1)
+      .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
   }
 }
