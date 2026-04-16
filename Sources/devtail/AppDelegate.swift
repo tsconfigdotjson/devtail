@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
   private var statusItem: NSStatusItem!
   private var popover: NSPopover!
   private var signalSource: DispatchSourceSignal?
+  private var localMonitor: Any?
+  private var globalMonitor: Any?
   private var idleIcon: NSImage?
   private var runningIcon: NSImage?
 
@@ -18,14 +20,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     updateMenuBarIcon()
 
-    if let button = statusItem.button {
-      button.action = #selector(togglePopover)
-      button.target = self
+    localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+      guard let self else { return event }
+      if event.window == self.statusItem.button?.window {
+        self.togglePopover()
+        return nil
+      }
+      if self.popover.isShown, event.window != self.popover.contentViewController?.view.window {
+        self.popover.close()
+      }
+      return event
+    }
+    globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+      guard let self, self.popover.isShown else { return }
+      self.popover.close()
     }
 
     popover = NSPopover()
     popover.contentSize = NSSize(width: 360, height: 500)
-    popover.behavior = .transient
+    popover.behavior = .applicationDefined
     popover.animates = false
     popover.delegate = self
     popover.contentViewController = NSHostingController(
@@ -51,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
   }
 
-  @objc private func togglePopover() {
+  private func togglePopover() {
     if popover.isShown {
       popover.close()
     } else if let button = statusItem.button {
