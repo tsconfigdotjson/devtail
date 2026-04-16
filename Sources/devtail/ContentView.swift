@@ -25,7 +25,6 @@ struct ContentView: View {
       footerBar
     }
     .frame(width: 360, height: 500)
-    .background(.background)
   }
 
   private var headerBar: some View {
