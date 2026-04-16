@@ -19,11 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     updateMenuBarIcon()
 
-    eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) {
-      [weak self] event in
-      guard let self,
-        event.window == self.statusItem.button?.window
-      else { return event }
+    eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+      guard let self, event.window == self.statusItem.button?.window else { return event }
       self.togglePopover()
       return nil
     }
