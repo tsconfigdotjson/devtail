@@ -80,7 +80,7 @@ struct ContentView: View {
     switch viewState {
     case .list:
       listContent
-        .transition(.move(edge: .leading).combined(with: .opacity))
+        .transition(.move(edge: .leading))
 
     case .detail(let id):
       if let process = store.processes.first(where: { $0.id == id }) {
@@ -97,7 +97,7 @@ struct ContentView: View {
             }
           }
         )
-        .transition(.move(edge: .trailing).combined(with: .opacity))
+        .transition(.move(edge: .trailing))
       } else {
         listContent
       }
@@ -106,14 +106,14 @@ struct ContentView: View {
       ProcessFormView(store: store) {
         withAnimation(.spring(duration: 0.25)) { viewState = .list }
       }
-      .transition(.move(edge: .trailing).combined(with: .opacity))
+      .transition(.move(edge: .trailing))
 
     case .edit(let id):
       if let process = store.processes.first(where: { $0.id == id }) {
         ProcessFormView(store: store, editing: process) {
           withAnimation(.spring(duration: 0.25)) { viewState = .detail(id) }
         }
-        .transition(.move(edge: .trailing).combined(with: .opacity))
+        .transition(.move(edge: .trailing))
       } else {
         listContent
       }
