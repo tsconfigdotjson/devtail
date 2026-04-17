@@ -94,6 +94,11 @@ struct ProcessDetailView: View {
         in: RoundedRectangle(cornerRadius: 8, style: .continuous),
         fallback: AnyShapeStyle(.ultraThinMaterial)
       )
+      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+      )
       .overlay(alignment: .bottom) {
         if isTerminalHovered {
           Button {
@@ -116,17 +121,26 @@ struct ProcessDetailView: View {
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
-            .background(.ultraThinMaterial)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(
+              RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5)
+            )
           }
           .buttonStyle(.plain)
+          .onContinuousHover { phase in
+            switch phase {
+            case .active:
+              NSCursor.arrow.set()
+            case .ended:
+              break
+            }
+          }
+          .padding(.horizontal, 8)
+          .padding(.bottom, 8)
           .transition(.opacity)
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
-      )
       .onHover { hovering in
         withAnimation(.easeInOut(duration: 0.15)) {
           isTerminalHovered = hovering
