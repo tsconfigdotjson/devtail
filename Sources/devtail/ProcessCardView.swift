@@ -97,7 +97,7 @@ struct ProcessCardView: View {
             isHovered
               ? Color.accentColor.opacity(0.35)
               : Color(nsColor: .separatorColor).opacity(0.6),
-            lineWidth: 0.5
+            lineWidth: isHovered ? 1.5 : 0.5
           )
       )
       .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
